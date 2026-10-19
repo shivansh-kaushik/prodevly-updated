@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Preview dev</title>
+<link rel="stylesheet" href="preview.css">
+<style>
+  :root { --bg:#f4f5f7; --fg:#15171c; --line:#cfd3db; --surface:#fff; --muted:#5b606b; --mono: ui-monospace, Menlo, monospace; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.5 system-ui, sans-serif; padding: 16px; }
+  h1 { font-size: 14px; margin: 0 0 10px; font-family: var(--mono); }
+  #log { font: 12px/1.4 var(--mono); white-space: pre-wrap; color: #a01818; }
+  /* bare=1: the viewport fills the window, for clean stills */
+  html.bare body { padding: 0; }
+  html.bare #title, html.bare .pv-controls, html.bare .pv-hint, html.bare #log { display: none; }
+  html.bare .pv-stagewrap, html.bare .pv.is-phone .pv-stagewrap { border-radius: 0; padding: 0; }
+  html.bare .pv-viewport, html.bare .pv.is-phone .pv-viewport { inline-size: 100vw; block-size: 100vh; aspect-ratio: auto; border-radius: 0; box-shadow: none; }
+  html.bare.phone .pv-viewport, html.bare.phone .pv.is-phone .pv-viewport { inline-size: 390px; block-size: 800px; }
+  html.bare.phone .pv-stagewrap { place-items: start; }
+</style>
+<script>{ const q = new URLSearchParams(location.search); if (q.has('bare')) { document.documentElement.classList.add('bare'); if (q.get('device') === 'phone') document.documentElement.classList.add('phone'); } }</script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<h1 id="title">loading…</h1>
+<figure class="pv" id="pv">
+  <div class="pv-stagewrap">
+    <div class="pv-viewport">
+      <div class="pv-overlay"></div>
+      <div class="pv-hint">Scroll inside to scrub</div>
+    </div>
+  </div>
+  <div class="pv-controls">
+    <button type="button" class="pv-play" aria-pressed="true">Pause</button>
+    <span class="pv-device-group">
+      <button type="button" class="pv-device" data-device="desktop" aria-pressed="true">Desktop</button>
+      <button type="button" class="pv-device" data-device="phone" aria-pressed="false">Phone</button>
+    </span>
+    <input class="pv-scrub" type="range" min="0" max="1000" value="0" aria-label="Scroll position">
+    <div class="pv-chips"></div>
+    <div class="pv-readout">
+      <div class="pv-readout-row"><span>scroll target</span><span class="pv-bar"><span class="pv-bar-target"></span></span><b class="pv-read-target">0%</b></div>
+      <div class="pv-readout-row"><span>3D follows at</span><span class="pv-bar"><span class="pv-bar-render"></span></span><b class="pv-read-render">0%</b></div>
+    </div>
+  </div>
+</figure>
+<pre id="log"></pre>
+<script type="module">
+  import { mountPreview } from './previews/common.js';
+  const params = new URLSearchParams(location.search);
+  const m = params.get('m') || 'smoke';
+  const fig = document.getElementById('pv');
+  if (params.get('device') === 'phone') {
+    fig.classList.add('is-phone');
+    fig.querySelectorAll('.pv-device').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.device === 'phone')));
+  }
+  const log = (s) => { document.getElementById('log').textContent += s + '\n'; };
+  window.addEventListener('error', (e) => log('error: ' + e.message));
+  window.addEventListener('unhandledrejection', (e) => log('rejection: ' + (e.reason?.stack || e.reason)));
+  try {
+    const mod = await import(`./previews/${m}.js?v=${Date.now()}`);
+    document.getElementById('title').textContent = m + ' — ' + (mod.meta?.title ?? '');
+    window.__pv = await mountPreview(fig, mod);
+    if (params.has('jump')) {
+      document.fonts?.ready?.then(() => {});
+      const j = Number(params.get('jump'));
+      const t = Number(params.get('t') || 4);
+      // let fonts and env settle, then pin the frame for screenshots
+      setTimeout(() => { window.__pv.jump(j, t); window.__pvReady = true; document.title = 'ready'; }, 600);
+    } else {
+      window.__pvReady = true;
+    }
+  } catch (err) {
+    log('mount failed: ' + (err?.stack || err));
+    window.__pvError = String(err);
+  }
+</script>
+</body>
+</html>

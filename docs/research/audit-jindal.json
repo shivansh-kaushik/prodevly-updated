@@ -1,0 +1,192 @@
+{
+ "project": "JindalSteelTube artistic + artistic-b",
+ "summary": "Read-only audit of /Users/amangupta/Desktop/Eventstrat/JindalSteelTube, branches artistic and artistic-b. I used only git show, ls-tree, log and diff, and the working tree is still on branch \"simple\", untouched. Both branches fork from 256d8a8. Each 3D version arrived as one commit of about 1,300 lines, made a minute apart on 2026-10-01 (artistic 2d900b7 at 21:15:50, artistic-b d7f824e at 21:15:10), and neither was iterated much. artistic got three small fixes afterwards (c331af4 mobile hero tilt, 84070a0 back-to-top, 5d08c02 phone menu and credit); artistic-b got only back-to-top. They share the same architecture: a fixed, aria-hidden React Three Fiber canvas (src/components/three/rod-canvas.tsx loads rod-scene.tsx via dynamic import with ssr:false) holds one procedural ribbed rebar built in rebar-geometry.ts (buildRod, buildSample, buildMarkingTexture). Each frame it reads window.scrollY, finds the chapter under the viewport centre with poseAt() in scroll-pose.ts, eases toward that chapter's POSES entry with k = 1 - exp(-delta*4.2), runs the weather particles and the bend shader, projects the DOM layer labels, and writes the --page-* CSS variables plus data-theme onto <html>. Neither branch pins anything; Lenis (lerp 0.12) only smooths the scroll. Where they differ: (1) Mobile. artistic lays the hero bar nearly flat across the top half using a width-aware tilt (rotZ = PI/2 - atan(0.7/(viewport.width/2))), then parks it at x 0.78 with opacity x0.3. artistic-b parks it at x 0.82/0.86 with opacity x0.5/0.25. In both, the split sample drops to 0.22 opacity and its labels are hidden. (2) Theme switch. artistic ramps 'light' only within \u00b1140px of the composition section's edges (inside its padding). artistic-b removed that, so 'light' blends through poseAt over the last 520px of the process chapter while that text is on screen, and the page passes through mid-grey with near 1:1 contrast. (3) Seasons. artistic splits the whole #seasons section into thirds (t*3), header included, so the heat effect starts too early. artistic-b measures each [data-season] screen with measureSpans() and inside(pos, span, feather), which lines up correctly. (4) Hygiene. artistic-b moves its scratch THREE.Color and Object3D objects to module scope (artistic's mix() allocates new THREE.Color several times per frame) and calls sample.updateMatrixWorld(true) before projecting labels (artistic's labels trail the sample by one frame). (5) Bugs. artistic-b still has the phone menu as a fixed panel inside a backdrop-blur header (0px tall; artistic fixed this in 5d08c02), invalid <ul><div><li> in ductility.tsx, unused gsap and @gsap/react dependencies, and a README that still describes 'Motion, GSAP, Lenis' and 'Lenis (synced to GSAP's ticker)'. GSAP is not imported anywhere in src on either branch. What worked: a scroll-driven target followed by a time-damped object, a data-driven per-chapter pose table, anchors re-measured with ResizeObserver, DOM labels projected from 3D with an sr-only fallback, a vertex-shader bend via onBeforeCompile, a cheap Lightformer studio environment baked once, reduced-motion handling, and all copy (with brochure page references) in typed src/content/jstl.ts. What is half-baked: mobile is an afterthought where the bar is faded into the edge (the same mistake as the tour-travel road), seven of nine poses are nearly the same centred pose so the 'acting out' barely shows, rotation driven by scroll speed has no cap, the rod-to-sample 'cut' is a crossfade between two meshes, the page theme depends on the WebGL loop, there is no poster, fallback or loading state, the canvas renders all the time, sections are padded out to make scroll distance (150dvh, 130dvh, 3x100dvh, mt-[38vh]), palette and materials are monochrome grey, and the docs and dependencies have drifted. The mistakes list below turns each of these into a rule for ProDevly.",
+ "stack_versions": "Both branches (package-lock): next 16.3.8, react/react-dom 19.2.8, typescript 5.9.3, tailwindcss 4.3.3 via @tailwindcss/postcss ^4 (ProDevly asked for 4.2, so pin it explicitly), three 0.186.1, @react-three/fiber 9.8.1, @react-three/drei 10.7.9, lenis 1.3.26 (ReactLenis root, lerp 0.12, autoRaf default), motion 13.4.6, @phosphor-icons/react 2.1.10, tw-animate-css 1.4, Archivo variable font (wdth axis) via next/font/google. artistic-b also lists gsap 3.15.0 and @gsap/react ^2.1.2, but nothing in src imports them. next.config.ts uses output:'export' and images.unoptimized, deployed to Netlify from out/ (not suitable for ProDevly, which needs a server for MongoDB and the admin panel).",
+ "brief_digest": [
+  "Both branches are one-shot ~1,300-line drops of the same R3F rebar architecture (rod-canvas.tsx, rod-scene.tsx, scroll-pose.ts, rebar-geometry.ts). artistic got 3 small follow-up fixes; artistic-b got 1. Neither was refined.",
+  "Scroll model: target pose = POSES[chapter under viewport centre]. It holds through each chapter and blends over the last max(45%, 520px) (poseAt in scroll-pose.ts). The rendered pose follows with frame-rate-independent damping k = 1 - exp(-min(dt,0.05)*4.2). This is the 'follow, don't sync' behaviour the user wanted for the tour-travel car.",
+  "Unbounded part: spin += (delta*0.16 + scrollDelta*0.0016) * pose.spin has no velocity clamp, so flings and nav jumps whip the bar (process chapter spin 2.2).",
+  "No pinning on either branch, deliberately, after the earlier 500vh GSAP-pinned 'forge' (256d8a8:src/components/sections/forge.tsx). Scroll distance was made up with oversized, mostly empty sections instead.",
+  "Mobile on both: below 1024px the bar is pushed to the right edge at 25\u201330% opacity, and the signature split sample drops to 22% opacity with labels hidden. That repeats the tour-travel 'road on the left only' problem.",
+  "Desktop monotony: 7 of 9 poses are x:0, y:0 with tilts of 0.32 rad or less. Every content section uses the same symmetric 5-col | bar | 5-col layout, and the DOM leader lines are tuned by hand with calc offsets.",
+  "Lighting and materials: one grey MeshStandardMaterial metal (#b4bcc6, metalness 0.92, roughness 0.3) with a canvas bump map for the embossed text, Environment + Lightformers baked once, ambient 0.25, white key light and blue rim light. No shadows, AO or post-processing. Monochrome steel on navy.",
+  "Typography: Archivo variable. Display uses wdth 125 / weight 800, headings wdth 112 / weight 700, body wdth 100. Radius 0 everywhere. The hero h1 is capped at 5.25rem, and the hollow '550SD' outline is stroked at 13% alpha (barely visible).",
+  "The page theme is written by the WebGL useFrame loop (--page-* variables and data-theme on <html>). artistic-b's light/dark blend passes through mid-grey while text is on screen.",
+  "No poster, loading fallback, WebGL detection, quality tiers or render pausing. The hero headline sits inside Motion Reveal (initial opacity 0), so it is invisible in the server-rendered HTML.",
+  "artistic-b-only bugs: the phone menu is a fixed panel inside a backdrop-blur header (0px tall), Reveal wraps an li (invalid HTML), gsap is an unused dependency, and the README is stale. DESIGN.md on both branches still describes the old pinned/photo/light-theme plan."
+ ],
+ "reusable": [
+  {
+   "path": "/Users/amangupta/Desktop/Eventstrat/JindalSteelTube @ artistic-b:src/components/three/scroll-pose.ts",
+   "what": "Typed chapter registry (SECTION_IDS), the Pose type (x, y, rotX, rotZ, spin, opacity, light, explode), the POSES table, measureAnchors(), measureSpans(selector), inside(pos, span, feather), ramp/smoothstep/clamp01, lerpPose(), and poseAt(centre, anchors), which holds a pose and blends over the last part of each chapter.",
+   "reuse_how": "Port as src/lib/scene/chapters.ts for ProDevly. Keep the typed registry and table, but make it POSES[breakpoint][chapter] (phone portrait, tablet, desktop). Add totem-specific fields (scale, hue/material index, morph), and send the output through a velocity-capped spring follower instead of only exponential damping."
+  },
+  {
+   "path": "/Users/amangupta/Desktop/Eventstrat/JindalSteelTube @ artistic-b:src/components/three/rod-scene.tsx",
+   "what": "The useFrame loop: dt clamp (Math.min(dt, 0.05)), frame-rate-independent damping k = 1 - Math.exp(-delta*4.2), reduced-motion snapping (k = 1, no spin), module-scope scratch objects (scratchA, scratchB, dummy, projected), and DOM label projection (sample.updateMatrixWorld(true), anchor.getWorldPosition(v).project(camera), then translate3d).",
+   "reuse_how": "Reuse the follower math and the projected-DOM-label technique for service and section labels attached to totems. Keep the module-scope scratch objects so the frame loop allocates nothing. Do not copy the --page-* writes onto <html>; drive the theme from a scroll timeline instead."
+  },
+  {
+   "path": "/Users/amangupta/Desktop/Eventstrat/JindalSteelTube @ artistic:src/components/three/rod-scene.tsx (bendShader, lines ~145-167)",
+   "what": "Vertex-shader deformation through onBeforeCompile and customProgramCacheKey. Shared uniform objects (uBend, uHalfLength, uSpin) are updated in place each frame, and the bend is counter-rotated by the spin so it stays fixed in screen space.",
+   "reuse_how": "Use the same pattern for totem 'reactions' such as twist, squash or wave without rebuilding geometry. Inject uniforms into MeshPhysicalMaterial, and give each variant a distinct customProgramCacheKey."
+  },
+  {
+   "path": "/Users/amangupta/Desktop/Eventstrat/JindalSteelTube @ artistic:src/components/three/rebar-geometry.ts",
+   "what": "Procedural geometry helpers: merge(), which normalises indexed and non-indexed parts before mergeGeometries and disposes the sources, and buildMarkingTexture(), a canvas-generated bump texture for embossed text.",
+   "reuse_how": "Use merge() for procedurally assembled totems so each one is a single draw call. Use the canvas texture approach to emboss 'ProDevly' or service glyphs onto totems without downloading textures."
+  },
+  {
+   "path": "/Users/amangupta/Desktop/Eventstrat/JindalSteelTube @ artistic:src/components/three/rod-canvas.tsx",
+   "what": "A client wrapper that loads the scene with next/dynamic(ssr:false) inside a fixed, pointer-events-none, aria-hidden layer, with page content at relative z-10 above it.",
+   "reuse_how": "Use the same wrapper, plus a server-rendered poster <Image> underneath and a loading prop. Crossfade to the canvas when the first frame renders."
+  },
+  {
+   "path": "/Users/amangupta/Desktop/Eventstrat/JindalSteelTube @ artistic:src/components/layout/header.tsx",
+   "what": "Same-page anchor links scrolled through Lenis with a 72px header offset, lenis.stop() while the phone menu is open, and the phone menu rendered outside the backdrop-blur header (fix 5d08c02).",
+   "reuse_how": "Copy the anchor and Lenis handling and the menu-outside-header structure, or render the menu through a portal."
+  },
+  {
+   "path": "/Users/amangupta/Desktop/Eventstrat/JindalSteelTube @ artistic:src/app/globals.css",
+   "what": "Tailwind v4 setup: @theme inline maps runtime CSS variables to colour utilities (bg-page, text-page-fg), @custom-variant light for data-theme, @utility type-display, type-heading, type-outline and tnum, scroll-margin-top on section[id], and a global reduced-motion clamp.",
+   "reuse_how": "Use it as the token pattern for ProDevly's colourful palette. Export the same tokens to three.js (one source of truth for CSS and materials)."
+  },
+  {
+   "path": "/Users/amangupta/Desktop/Eventstrat/JindalSteelTube @ artistic:src/content/jstl.ts",
+   "what": "All copy and figures in one typed 'as const' file, with a source reference on each block. CountUp animates only sourced numbers (BIS minimum to the JSTL value).",
+   "reuse_how": "Create src/content/prodevly.ts the same way, so every claim on the frontend is traceable and there are no invented statistics."
+  },
+  {
+   "path": "/Users/amangupta/Desktop/Eventstrat/JindalSteelTube @ artistic:src/components/layout/back-to-top.tsx",
+   "what": "A back-to-top button that appears after the hero, scrolls through Lenis, and has a progress rule (scaleX bound to scrollYProgress).",
+   "reuse_how": "Can be dropped in nearly as-is, restyled with ProDevly tokens."
+  }
+ ],
+ "mistakes": [
+  {
+   "issue": "On mobile the 3D object is sidelined and the signature moments disappear.",
+   "evidence": "rod-scene.tsx useFrame, `const stacked = window.innerWidth < 1024`. artistic: tgt.x = 0.78, opacity *= 0.3, rotZ *= 0.5. artistic-b: tgt.x = 0.86, opacity *= 0.25 (hero 0.82 / 0.5). Sample opacity is fade*(stacked ? 0.22 : 1) and labelOpacity = stacked ? 0. composition.tsx shows a text list on small screens instead.",
+   "root_cause": "Choreography was designed desktop-first around a reserved centre column. Mobile had no slot for the object, so it was patched inside the frame loop by pushing it to the edge and fading it. This is the same failure as the tour-travel road on the left.",
+   "rule_for_prodevly": "Design the 3D mobile-first. Author a POSES.mobile table in which each totem gets dedicated stage bands (for example a 55\u201370svh stage between text blocks, or the totem centred with text on a scrimmed card below it). Totems in signature chapters never drop below 0.85 opacity on phones. Test at 375x812 and 390x844 before 1440."
+  },
+  {
+   "issue": "The bar barely 'acts out' its chapters, so the page feels monotonous.",
+   "evidence": "scroll-pose.ts POSES: legacy, standard, properties, process, seasons and ductility are all x:0, y:0, with rotX/rotZ differences of 0.32 rad or less and only the spin rate changing. legacy.tsx, standard.tsx, properties.tsx, process.tsx and ductility.tsx all use the same 5-col | gap | 5-col layout around the bar.",
+   "root_cause": "A single object pinned to a screen-centre spine to avoid overlapping text, with every layout bent around it.",
+   "rule_for_prodevly": "Each chapter must change at least two of: screen position (crossing thirds), scale (1.5x or more), camera angle or framing, material or colour, and form (morph or assemble). Use different layout families for different sections (full-bleed stage, asymmetric split, horizontal strip, grid), and never let more than two consecutive sections share one."
+  },
+  {
+   "issue": "Rotation driven by scroll speed is unbounded, so the bar whips on flings and anchor jumps.",
+   "evidence": "rod-scene.tsx: `f.spin += (delta * 0.16 + scrolled * 0.0016) * cur.spin` where scrolled = scrollY - lastScroll, with no clamp. Process chapter spin is 2.2, and Lenis anchor scrollTo across thousands of px produces rib strobing.",
+   "root_cause": "The pose follower is damped, but this extra channel uses raw scroll delta. It is the same class of bug as the tour-travel car being too fast to follow.",
+   "rule_for_prodevly": "Every value driven by scroll goes through one follower: target = f(scrollProgress), then a critically damped spring with a maxVelocity clamp (about 2.5 rad/s for rotation and 0.6 viewport/s for translation). Clamp per-frame scroll delta (about \u00b160px) before it feeds anything."
+  },
+  {
+   "issue": "The light/dark theme blend passes through mid-grey while text is being read (artistic-b).",
+   "evidence": "artistic-b removed artistic's `sheet` edge ramp (\u00b1140px at the composition edges). `light` now comes from poseAt blending over the last 520px of #process, and --page-bg and --page-fg are both lerped, so contrast falls to about 1:1 around L = 0.5. artistic's fix only works because the 140px ramp happens to match the section padding.",
+   "root_cause": "Background and foreground colours were treated as continuous pose values rather than as a readability constraint.",
+   "rule_for_prodevly": "Never crossfade foreground and background together. Change the theme at section boundaries with a wipe (clip-path or mask reveal) or a hard switch inside the padding, computed from DOM boundaries. Check WCAG AA contrast at every intermediate state in a dev overlay."
+  },
+  {
+   "issue": "Page theming is coupled to the WebGL render loop.",
+   "evidence": "rod-scene.tsx useFrame calls root.style.setProperty('--page-bg' and so on) and sets root.dataset.theme. If the three.js chunk is slow, fails, or WebGL is unavailable, the page never changes theme. Each frame where the values change triggers a document-wide style recalculation.",
+   "root_cause": "The scene was made the source of truth for scroll state instead of a shared scroll timeline.",
+   "rule_for_prodevly": "Use one scroll-progress store (vanilla store or ScrollTrigger) as the source of truth. The DOM and CSS theme come from it via CSS scroll-driven animations or ScrollTrigger, and the 3D scene subscribes to the same store read-only. The page must look complete with the canvas absent."
+  },
+  {
+   "issue": "The signature 'cut and split' is a crossfade between two separate meshes, not a transformation.",
+   "evidence": "rod-scene.tsx: `fade = ramp(cur.explode, 0, 0.3)` fades the 14-unit rod out while a separate 1.5-unit buildSample() group fades in and its layers slide apart (SAMPLE_SPLIT). All materials are permanently `transparent`.",
+   "root_cause": "Opacity swaps were cheaper than modelling a continuous change of form.",
+   "rule_for_prodevly": "Signature beats are continuous morphs of the same object (instanced pieces, morph targets, shader displacement, or CSG-precomputed pieces moved by the same follower). Keep materials opaque and use alphaHash, dithering or scale for appear and disappear rather than `transparent: true` on metal."
+  },
+  {
+   "issue": "Sections were made extra tall to create scroll distance, and the result is empty screens.",
+   "evidence": "composition.tsx min-h-[150dvh] plus lg:mt-[38vh] spacer. ductility.tsx min-h-[130dvh]. seasons.tsx has three min-h-[100dvh] screens of one sentence each. On mobile these are mostly empty because the bar is faded at the edge.",
+   "root_cause": "After the earlier 500vh pinned forge (256d8a8), all pinning was removed with nothing to replace the choreographed moments.",
+   "rule_for_prodevly": "Use 2\u20133 short scrubbed pins for signature moments only (GSAP ScrollTrigger pin + scrub, +120vh or less each, anticipatePin, released under reduced motion). Everything else scrolls freely. No section may be taller than its content plus one screen unless the extra height shows something meaningful at every breakpoint."
+  },
+  {
+   "issue": "There is no poster, fallback or loading state, and the hero headline is invisible until hydration.",
+   "evidence": "rod-canvas.tsx: dynamic(() => import('./rod-scene'), { ssr: false }) with no `loading`. hero.tsx: 'The bar is the hero image', and the h1 is wrapped in <Reveal> (motion initial opacity 0), so it is hidden in the server-rendered HTML. No WebGL or context-loss detection. The decorative '550SD' outline is stroked with --page-line (13% alpha).",
+   "root_cause": "The hero relies entirely on a client-only WebGL bundle loaded lazily.",
+   "rule_for_prodevly": "Server-render a pre-rendered AVIF poster of the hero totems and a visible headline (animate with CSS so it does not depend on JS). Crossfade to the live canvas on its first rendered frame. Detect WebGL2 and context loss. Tier quality by device and PerformanceMonitor (dpr, post-processing, particle counts). Show the poster only for no-WebGL, Save-Data or reduced-motion users."
+  },
+  {
+   "issue": "The render loop runs all the time, and particles are animated on the CPU.",
+   "evidence": "<Canvas> uses the default frameloop 'always'. After #efficiency the bar's opacity is 0, but the scene keeps rendering through applications, portfolio, closing and footer. Rain updates 700 instance matrices per frame, and embers and snow loop over position arrays in JS.",
+   "root_cause": "No visibility or budget management for the WebGL layer.",
+   "rule_for_prodevly": "Pause rendering when no totem is visible or the tab is hidden (frameloop 'demand' with invalidate, or setFrameloop('never')). Animate particles in vertex shaders using uTime. Cap dpr at [1, 1.5] on mobile. Set and enforce a budget of 60fps on a mid-range Android and under 250KB gzip of three.js code on the home route."
+  },
+  {
+   "issue": "Lenis and R3F run on separate rAF loops, and the DOM overlays lag the 3D.",
+   "evidence": "providers/index.tsx: <ReactLenis root options={{ lerp: 0.12 }} /> (autoRaf), while useFrame reads window.scrollY. The pre-3D 256d8a8 smooth-scroll.tsx synced Lenis to gsap.ticker, but both 3D branches dropped that. artistic projected labels before matrixWorld updated (one-frame lag); artistic-b fixed it with sample.current.updateMatrixWorld(true).",
+   "root_cause": "Two independent clocks with no guaranteed order.",
+   "rule_for_prodevly": "Use one clock. Set Lenis autoRaf:false and call lenis.raf(time) from the same ticker that advances R3F (gsap.ticker, or a negative-priority useFrame), and read lenis.animatedScroll. Always update matrixWorld before projecting DOM overlays."
+  },
+  {
+   "issue": "Responsive behaviour is patched with ad-hoc overrides inside the frame loop.",
+   "evidence": "rod-scene.tsx reads window.innerWidth < 1024 every frame and applies multipliers (tgt.opacity *= 0.3, tgt.rotZ *= 0.5). Commit c331af4 added `tgt.rotZ = Math.PI/2 - Math.atan(0.7/(state.viewport.width/2))` after the bar's end dropped into the headline between phone and laptop widths.",
+   "root_cause": "Poses were authored for one aspect ratio and fixed reactively after bugs appeared.",
+   "rule_for_prodevly": "Author poses per aspect bucket (phone portrait, tablet, desktop, ultrawide) as data. Express placement as 'fit the projected bounding box into a named safe rect' rather than raw units. Add a dev overlay that draws text-safe zones and the projected totem bounds."
+  },
+  {
+   "issue": "DOM leader lines are aimed at a moving 3D object using hand-tuned CSS.",
+   "evidence": "standard.tsx: `w-[calc(8.333%+2.5rem)] -right-[calc(8.333%+4rem)]`. legacy.tsx: `w-[calc(8.333%+3rem)] -right-[calc(8.333%+4.5rem)]`. Both assume the bar sits exactly at x 0 while it tilts, spins and eases.",
+   "root_cause": "Two coordinate systems (CSS grid and three.js) linked by guesswork.",
+   "rule_for_prodevly": "Anything visually tied to a totem (labels, connectors, hotspots) is positioned from projected 3D anchors each frame, as with the layer labels, or drawn inside the canvas."
+  },
+  {
+   "issue": "The palette and materials are monochrome, so the object never feels sculptural or colourful.",
+   "evidence": "One MeshStandardMaterial in grey #b4bcc6 (metalness 0.92, roughness 0.3) on a navy #0e1420 page. The only colour is a #8aa3ea rim light and a blue Lightformer ring. Layer colours are flat (#c3cad3, #7a96e6, #002c78). No shadows, AO, bloom or SMAA. The tone mapping is the R3F default.",
+   "root_cause": "JSTL locked the brand to a single blue, plus a minimal lighting rig.",
+   "rule_for_prodevly": "Give each totem its own MeshPhysicalMaterial character (clearcoat, iridescence, sheen, transmission and thickness for glass-like pieces). Use coloured Lightformers or an HDRI, contact shadows or N8AO, and subtle bloom. Define the palette once as tokens shared by CSS and three.js, and check text contrast against it. This is colourful but avoids the generic purple-blue AI gradient."
+  },
+  {
+   "issue": "3D effects decorate the copy instead of demonstrating it, and effect windows are misaligned.",
+   "evidence": "artistic seasons.tsx paired weather with unrelated captions (Monsoon \u2192 'Controlled chemistry'). artistic-b's Winter \u2192 'Rigorous testing' is still a weak link, and its docs say 'the bar does not change' in seasons. artistic computed seasons as t*3 of the whole #seasons section, header included, so heat began early. artistic-b fixed this with [data-season] plus measureSpans() and inside().",
+   "root_cause": "Effects were chosen for spectacle and then mapped onto existing copy.",
+   "rule_for_prodevly": "Every 3D beat must show its section's message: for example Design (a totem resolving from wireframe to shaded), Build (modules stacking), Ship (a totem launching or locking in), Partners (totems orbiting and docking). Bind each effect to the exact DOM span that owns it (data-attribute plus measured span)."
+  },
+  {
+   "issue": "Docs and dependencies drifted, and the branches were generated in one shot with no iteration.",
+   "evidence": "2d900b7 and d7f824e are about 1,300-line single commits a minute apart. artistic-b package.json keeps gsap ^3.15.0 and @gsap/react, but src/lib/gsap.ts was deleted and nothing imports them. Its README says 'Motion, GSAP, Lenis' and 'Lenis (synced to GSAP's ticker)'. DESIGN.md on both branches still says 'Theme: light steel, locked', 'No orange\u2026', and describes the pinned GSAP chapters, while the build is dark with orange embers (#ff9a4a).",
+   "root_cause": "Large variants were generated without review checkpoints and the docs were never updated in the same change.",
+   "rule_for_prodevly": "Build the home page in vertical slices (hero totem, then one chapter, then the mobile pass, then the performance pass), with screenshots at 375, 768 and 1440 and a review at each slice. Update DESIGN.md in the same commit as the code it describes. Run knip or depcheck in CI to catch unused dependencies."
+  },
+  {
+   "issue": "Layout and markup bugs were left in artistic-b.",
+   "evidence": "artistic-b header.tsx renders the `fixed inset-0 top-18` phone menu inside a <header> with backdrop-blur-md, which makes the header its containing block, so the panel is squashed to 0px. artistic fixed this in 5d08c02. artistic-b ductility.tsx puts <Reveal> (a motion.div) around <li> inside <ul>, which is invalid HTML.",
+   "root_cause": "No validation pass after generation.",
+   "rule_for_prodevly": "Never place fixed overlays inside an element with backdrop-filter, filter or transform; render menus and modals through a portal. Use motion.li instead of wrapping list items. Run axe and HTML validation in CI or Playwright."
+  },
+  {
+   "issue": "artistic allocates objects in the frame loop.",
+   "evidence": "artistic rod-scene.tsx: `const mix = (a, b, k, out) => out.set(a).lerp(new THREE.Color(b), k)` is called about six times per frame. artistic-b moved this to module-scope scratchMix.",
+   "root_cause": "Convenience helpers allocate inside the loop.",
+   "rule_for_prodevly": "Allocate nothing inside useFrame. Keep scratch vectors and colours at module scope or in useMemo, and precompute colours as THREE.Color constants instead of parsing hex strings every frame."
+  },
+  {
+   "issue": "The 3D scene ignores the pointer, so it feels like a video rather than an object.",
+   "evidence": "rod-canvas.tsx wrapper is `pointer-events-none`. The scene has no pointer or cursor input. The only inputs are scroll and time.",
+   "root_cause": "Interaction was disabled wholesale so the canvas would not block the page.",
+   "rule_for_prodevly": "On desktop, add damped and capped cursor parallax and tilt to the totems (about \u00b16\u00b0) and hover states tied to the services they represent. Use R3F eventSource on a wrapper so the canvas never blocks page clicks. Disable this under reduced motion and on touch devices."
+  }
+ ],
+ "good_ideas": [
+  "Follow, don't sync: compute a target pose from scroll and let the rendered pose chase it with frame-rate-independent damping (k = 1 - exp(-min(dt,0.05)*4.2)). Navigation jumps then go straight to the destination pose without replaying every chapter. Keep this and add a velocity cap.",
+  "Keep chapter poses as data (POSES: Record<SectionId, Pose>) in one file, separate from the render code, so designers can tune each chapter in one place.",
+  "Re-measure section anchors with ResizeObserver(document.body), window resize and document.fonts.ready, rather than calling getBoundingClientRect every frame.",
+  "artistic-b's DOM-owned effect windows: tag the element (data-season), measure its span, and use inside(pos, span, feather) with feathered edges so effects line up exactly with their content.",
+  "Project 3D anchor points to plain DOM labels with translate3d. Text stays crisp, selectable and themeable, and an sr-only list carries the same content for screen readers and small screens.",
+  "Do deformation in the vertex shader via onBeforeCompile with customProgramCacheKey and shared uniform objects updated in place (the ductility bend), counter-rotated by the spin so it stays fixed on screen.",
+  "Use procedural geometry and a canvas-generated bump texture (embossed 'JI JSTL 550 SD'): richly detailed with no GLB or texture downloads.",
+  "Use drei <Environment frames={1} resolution={256}> with Lightformers for a cheap studio environment baked once, which is good for metal and glossy totems.",
+  "Entrance choreography: the object starts below the frame at opacity 0 and rises into the hero pose using the same follower.",
+  "Reduced motion handled at three levels: MotionConfig reducedMotion='user', a global CSS animation/transition clamp, and in the scene k = 1 (snap), no spin, frozen particles.",
+  "artistic switches theme only at the padding of the light section, so no text is read between themes. This is the right intent; implement it more robustly with a wipe at the boundary.",
+  "One variable font family with a width axis (Archivo wdth 100/112/125) gives distinct display, heading and body voices without a second font. Expanded display type suited the 'stamped steel' brand story.",
+  "Only sourced numbers are animated: CountUp runs from the BIS minimum to the JSTL value, both taken from the brochure, and every block in src/content/jstl.ts cites its page. This matches ProDevly's 'no fabricated statistics' rule.",
+  "Anchor navigation goes through lenis.scrollTo with a header offset, with section[id]{scroll-margin-top} as the fallback without JS, and lenis.stop() while the phone menu is open.",
+  "Removing all pinning was a reasonable reaction to the heavy 500vh pinned 'forge'. For ProDevly, use a few short scrubbed pins only where they carry a signature moment."
+ ]
+}

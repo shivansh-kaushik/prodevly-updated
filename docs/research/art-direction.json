@@ -1,0 +1,369 @@
+{
+ "palettes": [
+  {
+   "name": "Riso Overprint",
+   "hexes": [
+    "#EEEAE2 (bg \u00b7 Newsprint stock)",
+    "#3D5588 (ink \u00b7 Riso Federal Blue, used as the text colour instead of black)",
+    "#FF48B0 (Riso Fluorescent Pink)",
+    "#FFE800 (Riso Yellow)",
+    "#00838A (Riso Teal)",
+    "#FF6C2F (Riso Orange)",
+    "#3D185E (overprint plum: Pink \u00d7 Federal Blue, multiply)"
+   ],
+   "mood": "Zine or print-shop energy: hand-pulled, a little imperfect, loud but literate. In 3D, the totems look printed in two or three spot inks with grain, and they don't look plastic. Contrast: ink on bg is 6.13:1 (AA body). Pink, Orange and Teal on bg are only 2.3\u20133.8:1, so use them for 3D surfaces, large display text or fills, and never for body copy. Yellow is a fill only (1.04:1). Extra real overprints: Yellow\u00d7Pink = #FF4200, Yellow\u00d7Teal = #007700.",
+   "where_seen": "Ink hexes come from the Riso ink library that stencil.wiki compiles, via the riso-colors npm package. The Codrops 'Risograph Grain Light Effect in Three.js' tutorial shows the 3D treatment. Warm & Fuzzy (Neutral Studio, Awwwards SOTD 12 Sep 2026, tagged Colorful + 3D) uses the same two-ink logic: palette #190BB6 + #E5CF4F.",
+   "why_not_ai_looking": "These are real physical inks with documented values, not picked off a gradient wheel. The ink colour is blue, not #000 or slate-900. Colours mix by multiply overprint, never by gradient, and the misregistration and grain read as handmade."
+  },
+  {
+   "name": "Sottsass Totem (Memphis ceramic)",
+   "hexes": [
+    "#CDE8D9 (bg \u00b7 mint laminate)",
+    "#141414 (ink \u00b7 Bacterio black)",
+    "#2340C8 (cobalt glaze)",
+    "#F6C12B (yolk glaze)",
+    "#F2917F (salmon laminate)",
+    "#E5362C (tomato red)",
+    "#FAFAF7 (laminate white, for cards and plinths)"
+   ],
+   "mood": "Postmodern and playful but sculptural, like a design-gallery plinth in Milan. A coloured page background is bold without being garish. Contrast: ink on bg is 14.2:1. Cobalt on bg is 6.1:1, so it works for links and buttons. Tomato is 3.3:1 (large text only). Yolk and salmon are surface colours only.",
+   "where_seen": "The V&A's Sottsass 'Totem' has four stacked earthenware parts glazed in white, black, yellow, green and blue. The Met holds a glazed-earthenware Totem and the Bacterio laminate Sottsass designed for Abet Laminati, which the Met calls the main palette for Memphis veneers.",
+   "why_not_ai_looking": "The mint background and black-squiggle pattern come straight from a named design movement and its materials, which AI templates almost never use. Colours sit in flat, hard-edged blocks with no blending, and there's no violet anywhere."
+  },
+  {
+   "name": "Judd Hardware (material-led)",
+   "hexes": [
+    "#D6D7D2 (bg \u00b7 poured concrete)",
+    "#1B1D1E (ink \u00b7 blackened steel)",
+    "#D8332A (cadmium red lacquer)",
+    "#3F9A4A (Harley-Davidson green lacquer)",
+    "#F0A22E (amber Plexiglas, translucent)",
+    "#2B50B8 (anodized blue aluminium)",
+    "#A3A8AA (galvanized steel, metallic)"
+   ],
+   "mood": "Minimalist art meets the hardware store: industrial, precise and adult, but still colourful because each colour is a material (lacquer, acrylic, anodizing, zinc). It fits the 'full stack' story best. Contrast: ink on bg is 11.7:1. Anodized blue on bg is 4.93:1 (AA). Red is 3.3:1 (large text only). Amber and green are material colours only.",
+   "where_seen": "MoMA's Donald Judd 'Untitled (Stack)' (1967) is green lacquer on galvanized iron; the green is the paint used to customise Harley-Davidson motorcycles. Later stacks (1968) use stainless steel with amber Plexiglas.",
+   "why_not_ai_looking": "The colour comes from physically different materials with different roughness, metalness and transmission, not hue variety on identical plastic. Galvanized grey and concrete keep it grounded, and AI defaults never land on museum-minimalism references."
+  },
+  {
+   "name": "Signal Instrument",
+   "hexes": [
+    "#ECECE8 (bg \u00b7 bead-blasted aluminium)",
+    "#1C1E20 (ink \u00b7 graphite)",
+    "#FF5A1F (signal orange, the single hero accent)",
+    "#1B86CC (encoder blue)",
+    "#1FA67A (encoder green)",
+    "#F4C22B (encoder yellow)",
+    "#FFFFFF (white ABS key)"
+   ],
+   "mood": "An engineered object: a synth or lab instrument. It's calm and grey with one loud orange plus small colour-coded 'knobs' that work as section or category codes. Confident without shouting. Contrast: ink on bg is 14.1:1. Orange on graphite is 5.4:1, so use orange buttons with dark labels. Orange on bg is 2.6:1 (fills only). Blue on bg is 3.3:1 (large text).",
+   "where_seen": "Teenage Engineering OP-1 Field: an aluminium body with colour-coded encoders and an orange accent (design-guide commentary; hexes are approximations, not official). On Awwwards, Boc.Studio (SOTD 19 Sep 2026) uses #FF4421 + #0D0E0E, and Lusion's Oryzo (SOTD 13 Apr 2026, Site of the Month April 2026) uses #FF8539 on #100904.",
+   "why_not_ai_looking": "Colour is rationed: about 90% neutral metal, one hero hue, and a functional colour code. That's the opposite of rainbow 'vibrant' AI output. Orange here is a fluorescent signal colour, not the cream-and-terracotta second-wave default."
+  },
+  {
+   "name": "Lacquer Night (dark)",
+   "hexes": [
+    "#140F0D (bg \u00b7 urushi black, warm)",
+    "#F3EEE6 (ink \u00b7 porcelain)",
+    "#E2472B (shu vermilion lacquer)",
+    "#3FA38A (jade)",
+    "#F2B33D (citrine)",
+    "#3355C4 (lapis)",
+    "#C9A45C (gold leaf, metallic)"
+   ],
+   "mood": "Cinematic gallery after hours. High-gloss clearcoated totems sit on a warm-black seamless backdrop with rim light, saturated jewel tones, and drama without neon. Contrast: porcelain on bg is 16.5:1. Citrine is 10.2:1 and jade 6.2:1, so both work as text accents. Vermilion is 4.7:1 (AA). Lapis is 2.9:1 (surfaces only).",
+   "where_seen": "Oryzo by Lusion (Awwwards SOTD and Dev Award, Apr 2026) stages its product on warm near-black #100904 with orange #FF8539. Hubtown by Unseen Studio (SOTD Jun 2026) puts a glowing 3D monolith over a dark reflective landscape. The colours themselves come from Japanese urushi lacquerware (vermilion on black).",
+   "why_not_ai_looking": "The background is a warm brown-black, not #000, #0F172A slate or 'cyber' navy. The accents are lacquer and gem colours rather than neon cyan and magenta. It has no glow borders or glass cards, and the shine comes from the clearcoat on objects."
+  },
+  {
+   "name": "Klein Pool (saturated ground)",
+   "hexes": [
+    "#002FA7 (bg \u00b7 International Klein Blue-style ultramarine)",
+    "#F6F4EE (ink \u00b7 tile white)",
+    "#F5D63D (lemon)",
+    "#FF6F59 (coral)",
+    "#7FD3D1 (pool aqua)",
+    "#0B1550 (deep-end navy, for shadows and the footer)",
+    "#FFFFFF (glazed tile highlight)"
+   ],
+   "mood": "Sunny, art-world and fearless: the page itself is a colour. Glossy ceramic-tile totems on blue with caustic light suggest pools, summer and clarity. Contrast: tile white on blue is 9.7:1, lemon on blue is 7.4:1 and aqua on blue is 6.2:1, so all three are text-safe. Coral is 3.9:1 (large text only).",
+   "where_seen": "Warm & Fuzzy (Neutral Studio, SOTD 12 Sep 2026, tagged Colorful/3D/Portfolio) is a deep-blue and yellow agency site (#190BB6 + #E5CF4F). The colours also reference Yves Klein's IKB and Hockney's swimming-pool paintings.",
+   "why_not_ai_looking": "The blue is one flat field pigment with no purple fade. #002FA7 sits at about 223\u00b0 hue, away from the violet side, and AI sites almost never commit to a saturated full-bleed background. Set it as a custom @theme token, because Tailwind 4's default blues and indigos are OKLCH and read as 'template' immediately."
+  },
+  {
+   "name": "Toy Workshop (candy PBR)",
+   "hexes": [
+    "#C9DFF2 (bg \u00b7 nursery sky)",
+    "#10183A (ink \u00b7 navy)",
+    "#F0442C (tomato injection plastic)",
+    "#FFB511 (sunflower, Riso Sunflower)",
+    "#2FA14F (grass)",
+    "#F984CA (bubblegum, Riso Bubble Gum)",
+    "#FFFFFF (white ABS)"
+   ],
+   "mood": "Toy-box joy with craft behind it: chunky bevelled plastic and rubber totems, soft studio light and tilt-shift miniature depth of field. It's colourful in the most literal sense but kept in order by a single navy ink. Contrast: navy on sky is 12.6:1. Tomato on navy is 4.6:1, so tomato works as a button with a navy label. Other colours are surfaces only.",
+   "where_seen": "Bruno Simon's driveable portfolio started as a red toy car in a 3D world and was rebuilt for WebGPU and TSL. Messenger by Abeto (Three.js, 2025) is a toon-shaded tiny planet. Nick Ho by BORING (SOTD 11 Oct 2026, a 3D helmet viewer) is built around yellow #FED60A.",
+   "why_not_ai_looking": "The colours read as physical plastics with bevels, roughness and contact shadows, not as glowing UI tokens. The sky background is pale and cool, not white, gray-50 or cream. It works only if objects carry real material detail; flat untextured candy primitives would tip it into the Spline-default look."
+  },
+  {
+   "name": "Hi-Vis Kraft (we ship)",
+   "hexes": [
+    "#CDAE80 (bg \u00b7 kraft cardboard)",
+    "#18181A (ink \u00b7 stencil black)",
+    "#FF5F15 (hi-vis orange)",
+    "#2547C9 (packing-tape cobalt)",
+    "#F8F8F5 (stencil white)",
+    "#C8CCCF (retroreflective silver)",
+    "#E9F230 (hi-vis yellow, use sparingly)"
+   ],
+   "mood": "Shipping dock and workwear: tactile, utilitarian and honest, with a built-in 'we ship' metaphor (crates, tape, labels, pallets of components). It's warm and colourful without being cute. Contrast: ink on kraft is 8.4:1 and cobalt on kraft is 3.5:1 (large text only). Orange and yellow on kraft are 1.4\u20131.7:1, so they're material and label fills only.",
+   "where_seen": "This research didn't find it as an award-site palette. It's drawn from physical packaging and workwear materials, so treat it as the most original but least proven option.",
+   "why_not_ai_looking": "A mid-tone brown cardboard background is something no model defaults to. Hi-vis fluorescents are functional safety colours, and retroreflective silver gives a real material story. Risk: keep the orange fluorescent (#FF5F15), not brick, or it drifts toward the cream-and-terracotta second-wave AI default. Keep the yellow off near-black so it doesn't become the 'acid accent on black' tell."
+  }
+ ],
+ "type_pairings": [
+  {
+   "display": "Hubot Sans (wdth 125, wght 800\u2013900)",
+   "text": "Mona Sans (wdth 100, wght 400\u2013500)",
+   "mono": "Martian Mono (wdth 75\u2013112.5)",
+   "source": "Google Fonts: Mona Sans and Hubot Sans added 2024-11-04; Martian Mono 2022-11-25 (Evil Martians). GitHub repos github.com/mona-sans and evilmartians/mono.",
+   "license": "SIL OFL 1.1 for all three (confirmed in google/fonts ofl/ folders)",
+   "notes": "GitHub's own open superfamily gives a dev studio quiet credibility. The width and weight axes (75\u2013125) let headlines physically 'inflate' or 'compress' in sync with totem squash and stretch on scroll. Push Hubot to extreme widths for display, because default-width Mona Sans looks like the GitHub UI. next/font/google supports the axes."
+  },
+  {
+   "display": "Science Gothic (wdth 150\u2013200, CTRS 40\u201385)",
+   "text": "Host Grotesk (400\u2013500)",
+   "mono": "Datatype (wdth 50\u2013150)",
+   "source": "Google Fonts: Science Gothic 2025-11-19 (Thomas Phinney et al., a Bank Gothic revival with lowercase, true small caps, and weight, width, contrast and slant axes); Host Grotesk 2024-11-05 (Element Type); Datatype 2026-03-10 (Frank Tisellano).",
+   "license": "SIL OFL 1.1",
+   "notes": "An engineered, retro-industrial voice that suits the Judd Hardware or Hi-Vis Kraft palettes. Datatype turns text such as {b:30,70,50} into inline bar charts and sparklines through OpenType ligatures, which is handy for admin-dashboard KPI cells with no JS. Don't set body text in Science Gothic."
+  },
+  {
+   "display": "Strichpunkt Sans Expanded (wdth 200, wght 800\u2013900)",
+   "text": "Strichpunkt Sans Normal (wdth 100, wght 400\u2013500)",
+   "mono": "Fragment Mono",
+   "source": "Google Fonts: Strichpunkt Sans 2026-05-12 (Ren\u00e9 Bieder; Normal, Wide and Expanded widths); Fragment Mono 2022-10-23 (Wei Huang, a Helvetica-based coding mono).",
+   "license": "SIL OFL 1.1",
+   "notes": "Very new (2026), so it isn't a template default yet. One variable file covers display and text, which keeps the payload small. Its mix of rounded and sharp details gives Swiss confidence with character. Pairs well with Signal Instrument or Sottsass Totem."
+  },
+  {
+   "display": "Special Gothic Expanded One",
+   "text": "Special Gothic (wdth 75\u2013125, wght 400\u2013700)",
+   "mono": "Spline Sans Mono",
+   "source": "Google Fonts: Special Gothic family 2025-04-07 (Alistair McCready); Spline Sans Mono 2022-03-27.",
+   "license": "SIL OFL 1.1",
+   "notes": "A poster-punch gothic for big, confident, wide headlines over 3D. It suits the Riso Overprint and Toy Workshop palettes. Use the Expanded One cut only for display."
+  },
+  {
+   "display": "Anybody (wdth 50\u2013150, wght 800\u2013900)",
+   "text": "Familjen Grotesk (400\u2013500)",
+   "mono": "Martian Mono",
+   "source": "Google Fonts: Anybody (Tyler Finck), Familjen Grotesk (Familjen STHLM), Martian Mono.",
+   "license": "SIL OFL 1.1",
+   "notes": "Anybody's extreme 50\u2013150 width range makes kinetic type easy (squash and stretch synced to the totems). Familjen has idiosyncratic details that give text sizes personality without hurting readability."
+  },
+  {
+   "display": "Young Serif",
+   "text": "Schibsted Grotesk (400\u2013500)",
+   "mono": "IBM Plex Mono",
+   "source": "Google Fonts: Young Serif 2023-09-26 (Bastien Sozeau); Schibsted Grotesk 2023-03-02 (Bakken & B\u00e6ck); IBM Plex Mono.",
+   "license": "SIL OFL 1.1",
+   "notes": "A serif-led, editorial alternative that avoids the Instrument Serif italic-accent tell. A heavy old-style serif feels crafted and goes well with Lacquer Night or the ceramic and glaze totems."
+  },
+  {
+   "display": "Sporting Grotesque (Velvetyne)",
+   "text": "Hanken Grotesk or Schibsted Grotesk",
+   "mono": "Departure Mono",
+   "source": "Velvetyne Type Foundry (via Font Squirrel or GitLab; Lucas Le Bihan, 2016); departuremono.com (Helena Zhang). Self-host with next/font/local.",
+   "license": "SIL OFL 1.1 for Sporting Grotesque and Departure Mono. Check the licence file bundled with each download.",
+   "notes": "A bulbous, serpentine grotesque gives an art-school, handmade voice that Google-Fonts-only stacks lack. The pixel mono suits code labels, build-log motifs and the admin panel."
+  },
+  {
+   "display": "Tanker (Fontshare)",
+   "text": "Switzer (Fontshare)",
+   "mono": "Martian Mono",
+   "source": "Fontshare by Indian Type Foundry; Martian Mono from Google Fonts.",
+   "license": "ITF Free Font License: free for commercial use, but redistribution and self-hosting need ITF's consent, so serve from the Fontshare CDN. Sources conflict on Switzer, so read fontshare.com/licenses/itf-ffl first. Martian Mono is OFL.",
+   "notes": "A condensed, heavy display face with a neutral text face. Included as a non-Google option, but it's licence-constrained and doesn't fit next/font self-hosting, so it ranks below the OFL options."
+  }
+ ],
+ "totem_ideas": [
+  {
+   "concept": "Component Totem (hero)",
+   "form": "A vertical stack of 5\u20137 chunky glazed primitives on one axis: drum, rounded cube, cone, torus ring, half-sphere, capsule. On scroll they lift apart, rotate, swap order and snap back with a damped 'click', so different stacks are built from the same parts. On mobile it stays centred and the camera orbits.",
+   "material_and_light": "Glazed earthenware using MeshPhysicalMaterial with clearcoat 1, clearcoatRoughness about 0.08 and base roughness about 0.5. A slight noise normal gives a hand-thrown wobble, and glaze pools darker in the joints via baked AO. Light it with a large soft Lightformer key from top-left, a thin cool rim strip behind, and coloured bounce cards so each piece tints its neighbour.",
+   "metaphor_for_webdev": "Component architecture: reusable parts composed into different products.",
+   "references": "Ettore Sottsass ceramic Totems (V&A; Met; Sperone Gallery 1967); Br\u00e2ncu\u0219i's Endless Column."
+  },
+  {
+   "concept": "Borromean Knot",
+   "form": "Three thick interlocked rounded tubes or rings labelled frontend, backend and data. Pull one away on hover and the other two fall loose; release it and all three re-link and settle.",
+   "material_and_light": "Soft-touch silicone in three palette colours (sheen 0.6, sheenColor tinted, roughness 0.8) with polished chrome couplers (metalness 1, roughness 0.15) that pick up Lightformer strip highlights. Contact shadows sit underneath.",
+   "metaphor_for_webdev": "APIs and integrations: systems that only work when they're linked; take one away and nothing holds.",
+   "references": "Borromean rings in mathematics and sculpture (for example John Robinson's ring sculptures); industrial pipe couplers."
+  },
+  {
+   "concept": "The Stack (Judd)",
+   "form": "A wall-mounted vertical stack of identical boxes with equal gaps, each in a different material. On scroll each box slides out like a drawer to show what it contains: UI, API, services, data, infra.",
+   "material_and_light": "Amber Plexiglas (transmission 1, thickness, attenuationColor amber), green lacquered steel (clearcoat), galvanized zinc (metal plus a spangle roughness map), anodized blue aluminium (metalness 1, roughness 0.35) and black rubber (roughness 0.95). Use raking light from one side so the gaps cast long shadows.",
+   "metaphor_for_webdev": "The full stack as equal, modular layers, each built from the right material for its job.",
+   "references": "Donald Judd, Untitled (Stack), 1967, MoMA (green lacquer on galvanized iron); Judd stacks with amber Plexiglas (1968)."
+  },
+  {
+   "concept": "Andon Tower",
+   "form": "An industrial stack light: translucent cylindrical modules (red, amber, green, blue, clear) on a chrome pole. The lit module shows a project stage (plan, build, review, ship). It can drive the Process section and become the admin panel's status icon motif.",
+   "material_and_light": "Frosted polycarbonate (transmission with roughness 0.35 and thickness for a subsurface feel) around an emissive LED core (toneMapped false, intensity above 1). Only that core feeds selective bloom. Fresnel catches the rim.",
+   "metaphor_for_webdev": "CI/CD and project status made physical and honest: a real signal, not a fake metric.",
+   "references": "Andon or stack lights from the Toyota Production System (Patlite and Werma towers)."
+  },
+  {
+   "concept": "Bracket Gate",
+   "form": "Twin monumental curly braces { } standing as an arch. The camera passes through them into the Services section, and inside the 'scope' each service is its own small object.",
+   "material_and_light": "Polished terrazzo with coloured chips (an albedo texture using the palette colours, roughness 0.4 with chip variation) on a coloured cyclorama floor. Low raking sun with long soft shadows and heavy AO at the base.",
+   "metaphor_for_webdev": "Scope and entry point: stepping into the codebase or into what ProDevly does.",
+   "references": "Memphis architecture; Ricardo Bofill's La Muralla Roja colour-blocking; Italian terrazzo."
+  },
+  {
+   "concept": "Keycap Cairn",
+   "form": "A balanced cairn of oversized mechanical keycaps (Esc, Cmd, Tab, Enter) that wobbles on hover and resettles. In the Developers section each team member gets one keycap with their initial instead of a stock avatar.",
+   "material_and_light": "PBT plastic with fine micro-texture (roughness 0.7, small-scale bump) and doubleshot legends as geometry, not decals. One translucent resin 'artisan' cap per scene holds the glossy hero accent. A soft key light and a white bounce card sit below for underside fill.",
+   "metaphor_for_webdev": "Craft and hands-on engineering; the team as individual keys in one balanced build.",
+   "references": "Artisan keycap culture; Teenage Engineering hardware; stone cairns."
+  },
+  {
+   "concept": "Abacus Rack (pricing)",
+   "form": "Coloured beads on steel rods, one rod per plan. Beads slide to show what each tier includes, with real arithmetic and no fabricated numbers.",
+   "material_and_light": "Lacquered beech beads (wood-grain normal map, clearcoat 0.6, palette-colour stain that lets the grain show through) on brushed steel rods (anisotropy 0.8). Instance the beads for performance.",
+   "metaphor_for_webdev": "Transparent, countable pricing and scope.",
+   "references": "Soroban and Montessori bead materials."
+  },
+  {
+   "concept": "The Loom (partners)",
+   "form": "A wooden frame where each partner is a coloured warp thread woven into one ProDevly fabric band. Threads tighten and the pattern resolves as you scroll.",
+   "material_and_light": "Yarn (sheen plus fuzz shells or instanced fibres, roughness 1) on an oiled wood frame. Warm key light with a soft back rim so the fibres glow at the edges.",
+   "metaphor_for_webdev": "Collaboration and integration: independent threads becoming one product.",
+   "references": "Anni Albers' Bauhaus weavings (for example Black, White, Yellow, 1926), which built tonal range from limited colour."
+  },
+  {
+   "concept": "Pipeline Marble Run (process)",
+   "form": "A compact marble run of clear tubes and coloured ramps. A marble (a commit) passes lint, test, build and deploy gates and rings a bell at the end. It's scroll-scrubbed with velocity-capped following.",
+   "material_and_light": "Clear acrylic tubes (transmission 1, roughness 0.05, IOR 1.49) as the only transmissive object in frame, plus glossy glass marbles with an inner coloured swirl. Ramps are matte powder-coated in palette colours. Bright top softbox with strong contact shadows.",
+   "metaphor_for_webdev": "The CI/CD pipeline and process: each gate does one job and the result ships.",
+   "references": "Fischli & Weiss, 'Der Lauf der Dinge' (1987); Rube Goldberg machines; kinetic marble-run sculpture."
+  },
+  {
+   "concept": "Monolith Cryptex",
+   "form": "A tall rounded slab sliced into five independently rotating rings with engraved glyphs. When they align, the ProDevly wordmark forms (the loader or end-of-hero moment).",
+   "material_and_light": "Each ring is coloured anodized aluminium (metalness 1, roughness 0.3) with engraved, AO-baked glyphs. A ring Lightformer gives circular catchlights. Rim light is in a complementary hue.",
+   "metaphor_for_webdev": "Problem solving or 'cracking the code'; the stack aligning into a working product.",
+   "references": "Cryptex locks; Hubtown's glowing monolith (Unseen Studio, SOTD Jun 2026), recoloured instead of dark and moody."
+  },
+  {
+   "concept": "Post Box (contact)",
+   "form": "A chunky enamel postbox or pneumatic tube that takes in a folded letter when the Web3Forms submit succeeds, with a flag that pops up as the confirmation state.",
+   "material_and_light": "Enamel-painted steel (clearcoat 1 over a slightly orange-peel normal map) with brass flap hardware. Warm key light and contact shadow.",
+   "metaphor_for_webdev": "Communication and handoff: your brief is received.",
+   "references": "Messenger by Abeto (Three.js mail-carrier tiny planet, 2025); Royal Mail and Japan Post boxes."
+  }
+ ],
+ "material_lighting_notes": [
+  "Colour discipline is what award winners have in common. The 2026 Awwwards SOTD pages list only 1\u20132 palette colours: Warm & Fuzzy #190BB6/#E5CF4F, Oryzo #100904/#FF8539, Boc.Studio #FF4421/#0D0E0E, Nick Ho #FED60A. Keep the UI to bg, ink and one hero colour, and let the 3D materials carry the full palette.",
+  "Tone mapping: for brand-true saturated totems use THREE.NeutralToneMapping (Khronos PBR Neutral), which is designed to keep base colour hue and saturation for product rendering. AgX (Blender's default since 4.0) handles highlights more like a camera but is less saturated by design, so add contrast (for example the pmndrs AgX 'Punchy' CDL preset). Avoid ACES for brand colours because of its hue shifts.",
+  "Colour management: write the palette as sRGB hex and let three's ColorManagement convert. Set albedo textures to SRGBColorSpace and roughness and normal maps to NoColorSpace. Check that a totem's lit midtone matches its CSS swatch under neutral grey light before grading.",
+  "Build your own studio environment from drei <Lightformer> cards inside <Environment> rather than drei presets ('city', 'sunset', 'studio'), whose reflections are recognisable. Use a large soft rect key (top-left), a thin strip rim behind the subject, and one ring for round catchlights on gloss. Render the environment once at low resolution (256\u2013512) for nearly zero runtime cost.",
+  "Use coloured bounce cards: put low-intensity Lightformers tinted with an adjacent object's colour near each totem to fake colour bleed (GI). It's the cheapest single trick for making a colourful scene feel physical rather than CG.",
+  "Shadows and AO: bake AO and lightmaps in Blender Cycles for static totems, as Bruno Simon's portfolio does. For floors use drei AccumulativeShadows with RandomizedLight, which stops costing per frame once accumulated. For moving pieces use ContactShadows. For dynamic AO use N8AO with SMAA, since hardware MSAA doesn't work with it. Never let objects float without a contact shadow.",
+  "Geometry: bevel every edge (about 0.5\u20132% of object size) so edges catch highlight lines. Add slight hand-made asymmetry through sculpted wobble or vertex noise. Perfect unbevelled primitives are the clearest sign of default 3D.",
+  "Surface breakup: use roughness maps with smudges, fingerprints, glaze pooling and fine micro-normal noise. Give each material class its own roughness range: clay 0.6\u20130.8, glaze or lacquer as a clearcoat layer, rubber 0.9 with sheen, anodized metal 0.3\u20130.4. Never use 0.5 on everything.",
+  "Allow one glossy or transmissive hero per frame: everything else stays matte or satin, and only one object uses clearcoat-mirror or transmission. That gives visual hierarchy and keeps performance up, since transmission adds a render pass.",
+  "MeshPhysicalMaterial toolkit: clearcoat for glaze and lacquer, sheen for velvet, flock, yarn and silicone, transmission with thickness and attenuationColor for amber acrylic and andon modules, anisotropy for brushed steel rods. Use iridescence only as a thin-film detail on one object, never as the theme.",
+  "Post chain (pmndrs postprocessing, HalfFloat buffers, renderer toneMapping set to NoToneMapping): Render, then N8AO, then selective Bloom (threshold above 1, only toneMapped=false emissives), then ToneMapping (Neutral or AgX), then a LUT3D grade, then Noise or grain at roughly 0.03\u20130.08 opacity in display space, then SMAA. Skip chromatic aberration, or keep it below 0.5px.",
+  "Colour grading: lift shadows toward the palette's ink colour instead of #000, warm the highlights slightly, and clamp saturation so the palette stays within its range. Build the LUT from a real scene screenshot in DaVinci Resolve or Photoshop and load it with LUT3DEffect.",
+  "Grain and dithering: subtle animated grain makes renders feel photographed and also hides 8-bit banding in soft background gradients. Use material.dithering where gradients are visible.",
+  "Stage: render on a coloured cyclorama (a curved floor-to-wall sweep) whose colour exactly matches the CSS background, with a shadow-catcher floor and fog in the background colour so the horizon disappears and the canvas and DOM read as one surface.",
+  "Choose one stylisation if you want a graphic rather than photoreal look: a riso grain-light shader (Codrops: Lambert or custom diffuse plus noise grain), a Bayer or halftone dithering post pass (niccolofanton/dithering-shader), or a toon ramp like Messenger by Abeto. Mixing them looks indecisive.",
+  "Camera: use long lenses (FOV about 25\u201335\u00b0, roughly 50\u201385mm equivalent) for a sculpture or product feel instead of wide-angle distortion. A tilt-shift or shallow depth-of-field pass sells the toy-miniature palettes.",
+  "Motion lesson from the earlier tour-travel build: never lock objects 1:1 to scroll. Drive a target from scroll and have the object follow with a damped spring and a capped maximum velocity (or lerp with clamp), giving Oryzo-style inertia. On phones, recompose vertically with the totem centred and the camera dollying, rather than sticking it to one edge.",
+  "Performance and fallbacks: clamp DPR to 1\u20131.5 on mobile. Use drei PerformanceMonitor to drop AO, transmission and bloom on weak GPUs. Ship KTX2/Basis textures and Draco or Meshopt geometry, and instance repeated parts (beads, keycaps). Provide a static rendered image for prefers-reduced-motion and for no-WebGL. Consider WebGPURenderer with WebGL2 fallback and TSL shaders (the IVRESS and Bruno Simon rebuild approach)."
+ ],
+ "ai_look_tells": [
+  "Purple-to-blue or indigo gradients, and Tailwind default accents such as indigo-500 #6366F1, violet-500 #8B5CF6 and blue-500 #3B82F6. In Tailwind 4.2 the defaults are OKLCH, so define custom @theme tokens and never use bg-indigo-* or bg-violet-*.",
+  "Gradient text on headlines (bg-clip-text) and gradient 'Get Started' buttons.",
+  "Inter, Roboto, Poppins, Plus Jakarta Sans, DM Sans, Manrope or Outfit as the only typeface. The second-wave tells are Geist with an Instrument Serif italic accent word ('Build *faster*'), Space Grotesk, JetBrains Mono, and Clash Display, Satoshi or Cabinet Grotesk template stacks.",
+  "Second-set defaults that models fall back to when the first set is banned: a warm cream background with a terracotta accent, or near-black with a single acid-lime highlight.",
+  "Centred hero with a two-button CTA ('Get Started' and 'Learn More') above a tilted dashboard screenshot.",
+  "Rows of three identical feature cards with thin-line icons in tinted rounded squares, uniform rounded-2xl bento grids, and soft shadow-lg on everything.",
+  "Glassmorphism everywhere (backdrop-blur panels, white/10 borders), animated 'shine' gradient borders, and neon glow outlines on dark slate-900 #0F172A or #1E293B cards.",
+  "Blurred colour blobs or orbs floating behind content, and smooth mesh-gradient backgrounds with no grain.",
+  "Pill badges with a pulsing dot ('New', 'Live'), sparkle icons, and emoji in headings.",
+  "Fabricated proof, which is strictly banned for ProDevly: '500+ projects', '99% satisfaction', '24/7 support' counters, placeholder 'Trusted by' logo walls, and 5-star testimonial carousels with stock avatars.",
+  "Weightless copy: 'Elevate', 'Unlock', 'Seamless', 'Empower', 'Supercharge', 'In today's fast-paced digital landscape', 'Build faster. Ship smarter.', reflexive groups of three, and copy that could describe any company.",
+  "The 3D 'AI blob': a noise-displaced iridescent or chrome sphere, liquid-metal blobs, or a floating torus knot in MeshNormalMaterial.",
+  "Default 3D lighting: recognisable drei Environment preset reflections, perfectly sharp unbevelled primitives, roughness 0.5 plastic on every object, no contact shadows so things float, and pure #000 shadows with no colour bounce.",
+  "Generic 'tech' imagery: particle plexus networks, dotted globes, synthwave neon grid floors and starfield particle backgrounds. A 2026 Awwwards trend review calls generic particle backgrounds saturated.",
+  "Overcooked post-processing: bloom on everything, heavy chromatic aberration, and rainbow-dispersion glass (MeshTransmissionMaterial) used as the default material.",
+  "Spline-default scenes: flat untextured pastel primitives floating in a void with a single soft shadow.",
+  "Motion clich\u00e9s: every element fades up 20px with the same easing, objects locked 1:1 to the scroll (jittery and too fast), and no prefers-reduced-motion handling.",
+  "Uniform rhythm: every section has the same height and padding, centred text and a symmetrical grid, with no typographic scale contrast or tension.",
+  "Raw Lucide or Heroicons at 24px as the only illustration system.",
+  "AI-generated imagery: waxy plastic sheen, gibberish text on objects, impossible geometry, and too-perfect symmetry. Use real renders of your own totems and real team photos instead.",
+  "A generic four-column footer with a 'Stay updated' newsletter input and a row of social icons and nothing else."
+ ],
+ "sources": [
+  "https://www.awwwards.com/websites/3d/",
+  "https://www.awwwards.com/websites/sites_of_the_day/",
+  "https://www.awwwards.com/websites/colorful/",
+  "https://www.awwwards.com/websites/three-js/",
+  "https://www.awwwards.com/sites/warm-fuzzy",
+  "https://www.awwwards.com/sites/oryzo-ai",
+  "https://www.awwwards.com/sites/boc-studio",
+  "https://www.awwwards.com/sites/nick-ho",
+  "https://www.awwwards.com/sites/butter",
+  "https://www.awwwards.com/sites/the-tie-break",
+  "https://www.awwwards.com/lusion/",
+  "https://www.awwwards.com/brunos-portfolio-case-study.html",
+  "https://awwwards.com/igloo-inc-case-study.html",
+  "https://www.utsubo.com/blog/best-threejs-websites-2026",
+  "https://svilenkovic.com/3d/awwwards-2026-3d",
+  "https://www.hontran.dev/blog/best-award-winning-websites-2026",
+  "https://en.wikipedia.org/wiki/Messenger_(video_game)",
+  "https://www.gamespark.jp/article/2026/06/16/168037.html",
+  "https://www.khronos.org/news/press/khronos-pbr-neutral-tone-mapper-released-for-true-to-life-color-rendering-of-3d-products",
+  "https://discourse.threejs.org/t/is-agx-tonemapping-implemented-correctly/60609",
+  "https://wiki.blender.org/release_notes/4.0/color_management/",
+  "https://threejs.org/docs/#api/en/constants/Renderer",
+  "https://github.com/pmndrs/postprocessing",
+  "https://github.com/pmndrs/drei/blob/master/docs/staging/lightformer.mdx",
+  "https://drei.docs.pmnd.rs/staging/accumulative-shadows",
+  "https://drei.docs.pmnd.rs/staging/randomized-light",
+  "https://github.com/N8python/n8ao",
+  "https://react-postprocessing.docs.pmnd.rs/effects/n8ao",
+  "https://tympanus.net/codrops/?p=58657",
+  "https://github.com/niccolofanton/dithering-shader",
+  "https://www.npmjs.org/package/riso-colors",
+  "https://unpkg.com/riso-colors@latest/riso-colors.json",
+  "https://collections.vam.ac.uk/item/O1227018/totem-form-ettore-sottsass",
+  "https://www.metmuseum.org/art/collection/search/739285",
+  "https://www.metmuseum.org/art/collection/search/759731",
+  "https://www.phillips.com/detail/\u827e\u6258\u52d2\uff0e\u7d22\u85a9\u601d/75483",
+  "https://www.moma.org/collection/works/81324",
+  "https://juddtully.net/essays/donald-judd-shape-structure-stacks/",
+  "https://www.theartstory.org/artist/albers-anni/artworks/",
+  "https://blakecrosley.com/guides/design/teenage-engineering",
+  "https://www.wolfautomation.com/products/stack-lights/",
+  "https://garagefarm.net/blog/trends-in-3d-art",
+  "https://fonts.google.com/metadata/fonts",
+  "https://github.com/google/fonts/tree/main/ofl",
+  "https://github.blog/news-insights/company-news/introducing-mona-sans-and-hubot-sans/",
+  "https://fonts.google.com/specimen/Martian+Mono/about",
+  "https://fonts.google.com/specimen/Fragment+Mono/about",
+  "https://www.fontsquirrel.com/license/sporting-grotesque",
+  "https://velvetyne.fr/about/faq/",
+  "https://daringfireball.net/linked/2024/09/03/departure-mono",
+  "https://fontalternatives.com/fonts/switzer/",
+  "https://prg.sh/ramblings/Why-Your-AI-Keeps-Building-the-Same-Purple-Gradient-Website",
+  "https://www.925studios.co/blog/ai-slop-design-tells",
+  "https://www.superdesign.dev/blog/why-ai-design-looks-generic",
+  "https://noqta.tn/en/blog/ai-design-slop-overused-ui-patterns-fix-2026"
+ ]
+}

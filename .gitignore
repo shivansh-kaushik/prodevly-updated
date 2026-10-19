@@ -1,0 +1,46 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+*.tsbuildinfo
+
+# debug
+npm-debug.log*
+
+# env files: real values live in .env.local and the host's settings; the example is committed
+.env*
+!.env.example
+
+# local dev database
+/.mongo-data/
+
+# test and tooling output
+/coverage
+/.impeccable/mocks/
+/.impeccable/review/
+/.impeccable/build/
+/test-results/
+/playwright-report/
+
+# vercel
+.vercel
+
+# design preview tool output
+/docs/design-previews/shots/
+/docs/design-previews/sheets/
+/docs/design-previews/stills/*.png
+
+# detect-gpu benchmark data, copied from node_modules before dev and build
+/public/gpu-benchmarks/

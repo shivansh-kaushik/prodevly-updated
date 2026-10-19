@@ -1,0 +1,470 @@
+<p>This section covers how the public home page is built. It applies to whichever design direction is chosen. Between directions, only the totem geometry, the materials, the pose tables and the field colours change. The stage, the scroll follower, the quality tiers and the build gates stay the same.</p>
+
+<h3>1. Stack and pinned versions</h3>
+<p>Versions were checked with <code>npm view</code> on 11 October 2026. Every package is pinned exactly in <code>package.json</code> with no caret, and <code>package-lock.json</code> is committed. Two peer ranges limit upgrades. R3F 9.8.1 needs React below 19.4, and postprocessing 6.39.5 needs three below 0.187. Any change to react, three or fiber starts by checking those ranges.</p>
+<div class="tbl-wrap"><table class="tbl">
+<thead><tr><th>Package</th><th>Pin</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>Node.js</td><td><code>22 LTS</code> in <code>.nvmrc</code> and <code>engines</code></td><td>mongoose 9 needs Node 20.19 or later, which is higher than the Node 20.9 that Next needs. Node 24 LTS also works.</td></tr>
+<tr><td><code>next</code></td><td><code>16.4.0</code> (fallback <code>16.3.8</code>)</td><td>App Router with Server Components, so all copy is server-rendered. Turbopack is the default bundler, <code>proxy.ts</code> replaces <code>middleware.ts</code>, and params, cookies and headers are async. 16.4.0 is five days old, so 16.3.8 is the recorded fallback. The tour-travel project already runs 16.4.0 with React 19.3.0, three 0.186.1 and R3F 9.8.1. Agents read <code>node_modules/next/dist/docs</code> for the API, which ships matched to this version.</td></tr>
+<tr><td><code>react</code>, <code>react-dom</code></td><td><code>19.3.0</code></td><td>The R3F 9.8.1 peer range is React 19 up to but not including 19.4. React Compiler stays off at launch because the R3F tree mutates objects every frame.</td></tr>
+<tr><td><code>typescript</code></td><td><code>5.9.3</code></td><td>Strict mode. Next needs 5.1 or later.</td></tr>
+<tr><td><code>tailwindcss</code>, <code>@tailwindcss/postcss</code></td><td><code>4.2.4</code></td><td>The user asked for Tailwind 4.2, and 4.2.4 is the last 4.2 patch. 4.3.3 is the current release and is backwards compatible. We stay on 4.2.4 unless the user approves the move. Tokens live in <code>@theme</code> in <code>globals.css</code>, and there is no <code>tailwind.config</code>. House utilities are prefixed <code>pd-</code> so they never collide with core utility names.</td></tr>
+<tr><td><code>three</code>, <code>@types/three</code></td><td><code>0.186.1</code>, <code>0.186.0</code></td><td>r186, WebGL2 renderer. Pinned exactly because of the postprocessing cap.</td></tr>
+<tr><td><code>@react-three/fiber</code></td><td><code>9.8.1</code></td><td>React 19 renderer for three. We drive it with <code>frameloop="never"</code> and <code>advance()</code> from the shared clock. v10 is a WebGPU-first alpha and is excluded.</td></tr>
+<tr><td><code>@react-three/drei</code></td><td><code>10.7.9</code></td><td>Environment with Lightformers, ContactShadows, PerformanceMonitor, Preload and meshBounds. drei 11 is an alpha that needs fiber 10.</td></tr>
+<tr><td><code>maath</code></td><td><code>0.10.8</code></td><td>Easing helpers for secondary springs (dampE, damp3). The main follower uses our own <code>smoothDamp</code>.</td></tr>
+<tr><td><code>@pmndrs/detect-gpu</code></td><td><code>6.0.26</code></td><td>Picks a GPU tier before three.js is downloaded. Its benchmark data is self-hosted under <code>/gpu-benchmarks</code>, so it makes no CDN request.</td></tr>
+<tr><td><code>gsap</code>, <code>@gsap/react</code></td><td><code>3.15.0</code>, <code>2.1.2</code></td><td>The ticker is the single clock. ScrollTrigger handles DOM reveals and refresh events, SplitText handles heading reveals and quickTo handles the magnetic button. All plugins are free, and <code>useGSAP</code> cleans up on unmount.</td></tr>
+<tr><td><code>lenis</code></td><td><code>1.3.26</code></td><td>Wheel smoothing on the window through <code>lenis/react</code> (ReactLenis root) with <code>autoRaf: false</code> and <code>syncTouch: false</code>, plus <code>lenis/dist/lenis.css</code>. We never use the deprecated <code>@studio-freight/lenis</code>.</td></tr>
+<tr><td><code>@react-three/postprocessing</code>, <code>postprocessing</code></td><td><code>3.1.3</code>, <code>6.39.5</code>, held in reserve and not installed at setup</td><td>The canvas is transparent over DOM colour fields (see section 3). Bloom and composer tone mapping on a transparent buffer cause fringes and colour shifts, and the previews are judged without a composer. Film grain is a CSS overlay instead, and glows are emissive parts with soft halo sprites. If the hero review asks for bloom, this pair is added for tier 3 only, in its own dynamic chunk, and tested against the field layer. 3.1.3 is preferred over 3.2.0, which is one day old.</td></tr>
+<tr><td><code>mongoose</code></td><td><code>9.11.1</code></td><td>Bundles mongodb driver 7.7. The connection is cached on <code>globalThis</code> and models use <code>models.X ?? model(...)</code>. The public loader uses <code>.lean()</code> with explicit projections.</td></tr>
+<tr><td><code>zod</code></td><td><code>4.6.5</code> (re-checked with <code>npm view</code> at setup)</td><td>One contact-form schema shared by the browser and <code>/api/leads</code>.</td></tr>
+<tr><td>Web3Forms</td><td>HTTP API, no package</td><td>The browser POSTs to <code>https://api.web3forms.com/submit</code> with the access key from <code>NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY</code>, which is restricted to the ProDevly domain in the Web3Forms dashboard. The free plan rejects server-side calls.</td></tr>
+<tr><td>Dev only: <code>@playwright/test</code>, <code>@axe-core/playwright</code>, <code>knip</code>, <code>lighthouse</code>, <code>mongodb-memory-server</code>, <code>eslint</code> 9 with <code>eslint-config-next</code> 16.4.0</td><td>Latest at setup, pinned exactly</td><td>Screenshot gates, accessibility checks, unused-dependency checks, Lighthouse runs and the empty-database copy check. ESLint uses flat config because <code>next lint</code> was removed.</td></tr>
+</tbody></table></div>
+
+<h4>Deliberately not used</h4>
+<div class="tbl-wrap"><table class="tbl">
+<thead><tr><th>Left out</th><th>Reason</th></tr></thead>
+<tbody>
+<tr><td>three <code>WebGPURenderer</code> and TSL</td><td>drei Text, MeshTransmissionMaterial, ShaderMaterial and onBeforeCompile code all break under it. R3F v10 is still alpha, and a scene this size gains nothing on phones. We build on WebGL2 and keep custom shaders few and small, so a later port stays cheap.</td></tr>
+<tr><td>drei <code>ScrollControls</code></td><td>It adds its own scroll container in front of the canvas and renders its HTML on the client. That loses server-rendered copy and breaks anchors, find-in-page and scroll restoration. It also fights Lenis.</td></tr>
+<tr><td>Motion (<code>motion</code> 14.1.0) on the marketing page</td><td>GSAP already covers every DOM animation, and shipping both adds about 48 KB gzip for no gain. If the admin panel later needs layout animation, Motion is added to admin routes only.</td></tr>
+<tr><td>Rapier physics, drei <code>Text</code>, Environment presets, drei <code>View</code></td><td>Rapier is about 1.6 MB gzip. Text in WebGL is unreadable to screen readers and search engines, so all copy stays in the DOM. Presets fetch HDRIs from a CDN, so we use Lightformers baked once instead. View splits the canvas into several scene renders, and one stage is enough.</td></tr>
+<tr><td>GLB models</td><td>The totems are procedural, merged and vertex-coloured, which keeps the whole 3D payload under 1 MB. If a hero model is ever needed, it goes through gltf-transform with meshopt and KTX2.</td></tr>
+</tbody></table></div>
+
+<h3>2. Home page sections</h3>
+<p>Page order matches the previews: navbar, hero, partners, services, projects, pricing, developers, contact and footer. Section ids are <code>top</code>, <code>partners</code>, <code>services</code>, <code>work</code>, <code>pricing</code>, <code>team</code> and <code>contact</code>. Six sections carry <code>data-chapter</code> and own a 3D station: hero, services, work, pricing, team and contact. Partners and the footer have no station.</p>
+<h4>Data rules</h4>
+<ul>
+<li>One loader, <code>getHomeContent()</code> in <code>src/services/public/home.ts</code>, reads the published partners, showcase projects, pricing plans and developer profiles. It uses explicit field projections and <code>.lean()</code>, sorts by each record's <code>order</code> field and returns plain DTOs. It never selects ledger, payment, pay or contact fields.</li>
+<li>A section whose list is empty returns <code>null</code>. Its nav link and its 3D station go with it, because the nav is built from the same data and the stage reads the rendered <code>[data-chapter]</code> elements. Hidden sections leave no gap.</li>
+<li>Static copy lives in <code>src/content/*.ts</code> as typed constants: hero, services, process, nav, site details and footer. Components hold no literal copy. The team confirms the drafts at the M2 and M3 gates.</li>
+<li>The page is statically generated with <code>export const revalidate = 3600</code>. Publishing or unpublishing content revalidates its content tag (see the admin plan), so edits appear on the next request. <code>cacheComponents</code> stays off. If MongoDB cannot be reached, the loader throws. At build time that fails the build, and during revalidation Next keeps serving the last good page.</li>
+</ul>
+
+<h4>Navbar</h4>
+<ul>
+<li><strong>Content.</strong> The ProDevly wordmark, which links to the top. Anchors to Services, Work, Pricing, Team and Contact. A "Start a project" button that scrolls to the form. On phones the bar holds the wordmark, a compact CTA and a menu button.</li>
+<li><strong>Data.</strong> Labels come from <code>src/content/nav.ts</code>. A link appears only when its section rendered.</li>
+<li><strong>Behaviour.</strong> Anchors call <code>lenis.scrollTo</code> with the bar height as the offset, and <code>section[id]</code> has <code>scroll-margin-top</code> as the no-JS fallback. The current-section marker is a data attribute that changes when the rendered chapter index changes. It is never updated every frame. The phone menu is a native <code>&lt;dialog&gt;</code> opened with <code>showModal()</code> and portalled to <code>body</code>, so a blurred or transformed header cannot squash it. <code>lenis.stop()</code> runs while the menu is open. A skip link to <code>#main</code> comes first in the tab order.</li>
+<li><strong>3D beat.</strong> None. The bar sits above the stage on a solid field background.</li>
+</ul>
+
+<h4>Hero</h4>
+<ul>
+<li><strong>Content.</strong> The H1 "Web apps, SaaS and custom software, built end to end." It is followed by one plain sentence on who ProDevly works with: founders, growing businesses and agencies, in India and abroad. The primary CTA is "Start a project". The secondary link is "See our work" when showcase projects exist and "What we build" otherwise.</li>
+<li><strong>Data.</strong> <code>src/content/home.ts</code>. The hero shows no numbers.</li>
+<li><strong>Rendering.</strong> The H1 is in the server HTML and paints in the first frame, with no opacity or clip entrance. The hero poster (an AVIF of the live scene in the same composition) fills the stage zone until the canvas renders its first frame. The canvas then crossfades in over 400 ms. If the poster covers more of the screen than the H1, it becomes the LCP element, so it is preloaded with <code>fetchpriority="high"</code> and kept under the size budget.</li>
+<li><strong>3D beat.</strong> The hero totem rises into its pose through the same follower, with no separate intro animation. It then idles with a slow breathing offset and pointer tilt. On phones the totem sits centred between the headline in the top third and the CTA card at the bottom.</li>
+</ul>
+
+<h4>Partners</h4>
+<ul>
+<li><strong>Content.</strong> A single band of partner logos under the heading "Partners", with each name as accessible text. A logo links to the partner's site when a URL is set.</li>
+<li><strong>Data.</strong> The <code>partners</code> collection. A record shows only when it is published and its <code>permissionConfirmed</code> flag is true, and the admin form will not publish without that flag. Logos are SVGs, sanitised on upload. They render in the section's ink colour through a CSS mask so the band reads as one set. On fine pointers, hovering a logo shows its original colours.</li>
+<li><strong>Empty state.</strong> The band is hidden. It has no placeholder logos and no "trusted by" line.</li>
+<li><strong>3D beat.</strong> No station. The band passes during the travel between the hero and services stations, so the totem is moving while the logos scroll by. When the band is hidden, that travel gets shorter.</li>
+</ul>
+
+<h4>Services</h4>
+<ul>
+<li><strong>Content.</strong> The six services are Web apps, SaaS products, Custom software, Mobile apps, UI/UX design, and Cloud and DevOps. Each has a one-sentence description, three to five included items and stack chips. Under the services sit a four-step "How we work" strip (Scope, Design, Build, Support) and the list of technologies ProDevly works in.</li>
+<li><strong>Data.</strong> <code>src/content/services.ts</code>, changed by pull request. These are statements about what ProDevly offers, and the team confirms them.</li>
+<li><strong>3D beat.</strong> One becomes many, the signature beat in every direction. The hero pieces separate and recombine into one piece or group per service. On fine pointers, hovering or focusing a service row lifts the matching piece. On touch, the row nearest the viewport centre is the lit one.</li>
+</ul>
+
+<h4>Projects (Work)</h4>
+<ul>
+<li><strong>Content.</strong> One card per published showcase project. A card has the title, the client display name when one is set, a one-paragraph summary, the services delivered, stack chips, a cover image through <code>next/image</code> and a live link when one is set.</li>
+<li><strong>Data.</strong> The <code>showcaseItems</code> collection, kept separate from the internal projects ledger. A showcase record may store an internal project id, but the public loader never follows it.</li>
+<li><strong>Empty state.</strong> The section is hidden. "Sample project" cards exist only in the previews.</li>
+<li><strong>3D beat.</strong> One 3D piece per published project, up to six. Further projects appear only in the DOM list. The pieces line up and step forward in turn as their cards pass the stage zone. Each step is bound to its card's measured span. The 3D carries no project text, so titles and images stay in the DOM.</li>
+</ul>
+
+<h4>Pricing</h4>
+<ul>
+<li><strong>Content.</strong> One card per plan with its name, who it suits, what it includes, a price line and a CTA. The CTA scrolls to the form with that plan pre-selected.</li>
+<li><strong>Data.</strong> The <code>pricingPlans</code> collection. A plan stores either an amount and a currency, formatted with <code>Intl.NumberFormat</code>, or a "quoted" flag that shows "Quoted after a scoping call". Only published plans render, from one to four.</li>
+<li><strong>Empty state.</strong> The section is hidden.</li>
+<li><strong>3D beat.</strong> One element per plan, growing in size with plan order. Depending on the direction these are plates, plinths or totems with more pieces. The count and order follow the data.</li>
+</ul>
+
+<h4>Developers (Team)</h4>
+<ul>
+<li><strong>Content.</strong> A grid of people, each with a photo (or an initial monogram when there is no photo), name, role, a two-line bio, skill chips, and GitHub and LinkedIn links when they are set.</li>
+<li><strong>Data.</strong> Published <code>developerProfiles</code> records with <code>consentConfirmed</code> set. These are separate from admin accounts, so the loader never reads pay, email or permissions.</li>
+<li><strong>Empty state.</strong> The section is hidden.</li>
+<li><strong>3D beat.</strong> One small piece per person, up to eight. Each piece carries the person's initial as a maker's mark, drawn into a canvas texture at runtime from the record's name. The 3D shows no faces.</li>
+</ul>
+
+<h4>Contact</h4>
+<ul>
+<li><strong>Content.</strong> A short heading, the line "We read every enquiry and reply by email.", the form, and the company email as a mailto link from <code>src/content/site.ts</code>.</li>
+<li><strong>Fields.</strong> Name, email, company (optional), project type (the six services plus "Something else"), plan (optional, pre-selected from pricing, shown only when plans exist), timing (This month, This quarter, Just exploring), message, and the Web3Forms <code>botcheck</code> honeypot. There is no budget field with figures.</li>
+<li><strong>Submission.</strong> The browser POSTs to Web3Forms and, in parallel, sends the same payload to <code>/api/leads</code>. That route validates with the shared zod schema, rate-limits, screens for spam and stores the enquiry in MongoDB so the team can see it in the admin panel. The form reports success when either call succeeds. When both fail, it shows an inline error with a retry button and the mailto link. CSP <code>connect-src</code> and <code>form-action</code> include <code>api.web3forms.com</code>.</li>
+<li><strong>Accessibility.</strong> Native constraint validation runs first, then zod on submit. Each error is linked to its field with <code>aria-describedby</code>, focus moves to the first invalid field, and the success message is announced from a <code>role="status"</code> region.</li>
+<li><strong>3D beat.</strong> The final station shows an Enter key, an empty top slot, a start call or a centred monogram, depending on the direction. A successful submit plays the direction's send gesture once through the stage store. With reduced motion there is no gesture, and the DOM message confirms the send.</li>
+</ul>
+
+<h4>Footer</h4>
+<ul>
+<li><strong>Content.</strong> The wordmark, one plain line about ProDevly, anchor nav, the services list, the email address, social links (only those set in <code>src/content/site.ts</code>), a Privacy link, and the copyright line with the current year.</li>
+<li><strong>3D beat.</strong> None. The footer has a solid ink field. Once no station is in view, the ticker stops calling <code>advance()</code> and the canvas wrapper switches to <code>visibility: hidden</code>, so no GPU work runs behind the footer.</li>
+</ul>
+
+<h4>No fabricated statistics</h4>
+<p>A number appears on the public site only when the team typed it into a record (a price, for example) or when it is computed from records at render time. Version one shows no counts at all. The site has no testimonials, ratings, awards, client counts, years in business or "trusted by" lines, and the admin panel has no collection that could supply them. Two checks in <code>npm run verify</code> enforce the rule.</p>
+<ol>
+<li><strong>Source grep.</strong> <code>scripts/check-public-copy.mjs</code> scans <code>src/content/**</code> and any texture strings in <code>src/three/**</code> for these patterns: <code>\d+\s*\+</code>, <code>\d+(\.\d+)?\s*/\s*(5|10)\b</code>, <code>\d+\s*%</code> and <code>\b\d+[kKmM]?\s+(clients|projects|years|countries|reviews|users|apps|developers)\b</code>. It also flags the phrases trusted by, award, rated, testimonial, satisfaction, happy clients and years of experience, ignoring case. A match fails the build unless its line carries a <code>// copy-ok: reason</code> comment. Every exemption is printed for review.</li>
+<li><strong>Rendered check.</strong> <code>scripts/check-rendered-copy.ts</code> starts the production build against an in-memory MongoDB that holds only the seed, which is three superadmins and no public content. It loads <code>/</code> and collects the visible text plus every <code>alt</code> and <code>aria-label</code>. Any digit fails the check, except the copyright year in the footer. A second run loads fixture records (one partner, one project, one plan and one developer) and asserts that every digit sits inside an element marked <code>data-source="db"</code>. Elements marked <code>data-copy-ok</code>, such as a direction's label numbering, are allowed and listed in the output.</li>
+</ol>
+
+<details><summary>3D beat per direction (reference)</summary>
+<div class="tbl-wrap"><table class="tbl">
+<thead><tr><th>Station</th><th>Keycap Colorway</th><th>Glazed Component Totems</th><th>Live Source</th><th>Studio Standard</th></tr></thead>
+<tbody>
+<tr><td>Fields</td><td>Cobalt, chalk, yolk, mint, tomato and graphite by section</td><td>Mint, laminate white, cobalt, yolk, salmon and black by section</td><td>One warm-black stage throughout, with colour from syntax and lacquer</td><td>One light ground throughout</td></tr>
+<tr><td>Hero</td><td>A cairn of six or seven sculpted keycaps with the resin artisan cap on top, and underglow near the pointer</td><td>A six-piece glazed totem on a white plinth with a wall label</td><td>The totem assembles one piece per line as the code buffer types</td><td>The extruded P monogram in three-quarter view</td></tr>
+<tr><td>Services</td><td>The cairn unstacks into a three-by-two key cluster with service legends and a typing rhythm</td><td>The pieces lift apart and re-stack into one totem per service group</td><td><code>services.map(build)</code> splits the totem into six small totems</td><td>The monogram turns edge-on in the right third beside the list</td></tr>
+<tr><td>Work</td><td>One cap per project stands on edge like a record sleeve, tilting forward in turn</td><td>A gallery row of plinths with one totem per project</td><td>One totem per project rides a gold rail like a deploy log</td><td>The monogram shrinks into a corner while the cards take the stage</td></tr>
+<tr><td>Pricing</td><td>The caps settle onto one keyboard plate per plan, growing with plan order</td><td>One plinth per plan, with the piece count growing with plan order</td><td>One totem per plan, more complex with each plan</td><td>The monogram lies face-up above the plan cards</td></tr>
+<tr><td>Team</td><td>One artisan cap per person with their initial</td><td>Single pieces on small plinths, with initials as makers' marks</td><td>Gold-leaf initials applied to pieces</td><td>The monogram faces front behind the grid</td></tr>
+<tr><td>Contact</td><td>One large Enter key, which presses and lights up on a successful submit</td><td>The original totem with an empty top slot, which a new piece fills on submit</td><td>An empty lit slot that fills on submit</td><td>The monogram, large and centred</td></tr>
+<tr><td>Signature input</td><td>Physical key presses depress the matching caps (desktop only, ignored while a form field has focus)</td><td>Hovering lifts the nearest piece, which settles back with a spring</td><td>Clicking a highlighted value in the DOM code cycles it and rebuilds the totem</td><td>Tilt toward the pointer</td></tr>
+</tbody></table></div>
+<p>In Live Source the code buffer is DOM text, so it can be selected and read by screen readers. It is never drawn in WebGL.</p>
+</details>
+
+<h3>3. 3D stage architecture</h3>
+<p>One fixed canvas sits behind server-rendered DOM. The page is complete without it, and the canvas only adds the totems. The stage is mounted from <code>src/app/(site)/page.tsx</code> and never from a layout, so admin routes never load three.js.</p>
+<h4>Layers, back to front</h4>
+<ol>
+<li><strong>Section fields</strong> (z-index 0). Each section has an absolutely positioned <code>.field</code> child in its field colour. When one section's field slides over the next one's during scroll, the moving edge is the colour wipe. It runs on the compositor with no JavaScript, and it works without WebGL.</li>
+<li><strong>Stage canvas</strong> (z-index 10). A wrapper with <code>position: fixed</code>, <code>top: 0</code>, <code>height: 100lvh</code>, <code>contain: strict</code>, <code>pointer-events: none</code> and <code>aria-hidden="true"</code>. The canvas is transparent (<code>alpha: true</code>, <code>scene.background = null</code>) and uses NeutralToneMapping, which keeps brand hues accurate.</li>
+<li><strong>Grain</strong> (z-index 15). A fixed 128-pixel tiled noise webp at about 5% opacity. It is static, so reduced motion needs no change.</li>
+<li><strong>Content</strong> (z-index 20). Text, cards and the solid scrim cards.</li>
+<li><strong>Navbar</strong> (z-index 40), with dialogs in the top layer.</li>
+</ol>
+<p>This order only works when <code>main</code> and the section elements create no stacking context. They carry no transform, filter, opacity below 1, isolation, contain, will-change or positioned z-index. GSAP animates child elements only. A lint rule in <code>scripts/check-stacking.mjs</code> greps the section components for those properties.</p>
+
+<pre class="mermaid">
+flowchart LR
+  IN[Wheel, touch, keys, anchors] --> LEN[Lenis on window]
+  TICK[gsap.ticker, the one clock] --> LEN
+  LEN -->|targetScroll| STORE[scroll-store target chapter]
+  DOM[Measured section centres] --> STORE
+  STORE --> FOL[Followers with speed cap]
+  TICK --> FOL
+  FOL -->|rendered chapter| POSE[Pose table for aspect bucket]
+  POSE --> R3F[R3F advance and render]
+  TICK --> R3F
+  R3F --> LBL[Projected DOM labels]
+  LEN -->|scroll event| ST[ScrollTrigger DOM reveals]
+</pre>
+
+<h4>Chapters anchored to measured DOM sections</h4>
+<ul>
+<li>Each station's centre is the scroll position at which its <code>[data-chapter]</code> section's centre meets the viewport centre. Centres are measured again on ScrollTrigger <code>refresh</code>, on a <code>ResizeObserver(document.body)</code> debounced to 150 ms, after <code>document.fonts.ready</code> and after the stage mounts. Nothing is measured inside the frame loop.</li>
+<li><code>chapterFromY()</code> maps a scroll position to a chapter float, interpolating linearly between centres. A station hold then applies smootherstep from 0.22 to 0.78 inside each segment. The target therefore parks while a section's copy is on screen and moves only during the scroll between sections.</li>
+<li>Sections get their height from their content. At most two signature beats may use a CSS <code>position: sticky</code> pin of up to 120vh extra each. ScrollTrigger <code>pin</code> is not used, so there is no pin-spacer reflow.</li>
+</ul>
+<h4>Poses as data per aspect bucket</h4>
+<ul>
+<li>There are three buckets, chosen by aspect ratio and never by user agent. <code>tall</code> covers aspects below 0.8 (phones, and tablets in portrait). <code>mid</code> covers 0.8 up to 1.35. <code>wide</code> covers 1.35 and above. <code>tall</code> and <code>wide</code> are authored in <code>src/three/poses/tall.ts</code> and <code>wide.ts</code>. <code>mid</code> uses the wide poses, which the framing solver re-fits, and it may override single stations.</li>
+<li>A pose holds <code>{ cam, aim, vFov, subject: { pos, rot, scale }, assembly, safe, env }</code>. <code>assembly</code> is a record of 0-to-1 parameters, such as stacked to cluster, that drive every piece's transform. <code>safe</code> is the named safe rect, in viewport fractions, that the subject's projected bounds must fit. <code>env</code> holds the environment yaw and tint.</li>
+<li>Poses are absolute, so any station can be missing and the stations on either side still interpolate correctly. Camera position and aim follow centripetal Catmull-Rom rails through the stations that are present, sampled with <code>getPoint(i / (n - 1))</code> so the rail passes exactly through each station. Scalars lerp, rotations slerp and assembly parameters lerp.</li>
+<li>Signature beats are continuous transforms of the same pieces, driven by assembly parameters. Nothing fades one mesh out while another fades in.</li>
+<li>Every station changes at least two of these five: screen position across thirds, scale by 1.5x or more, camera angle or framing, material or colour, and form. The screenshot review checks this.</li>
+<li>The DOM layout of each section reserves a stage zone that matches the safe rect, for example a spacer of about 46svh between headline and card on phones. <code>?debug=stage</code> draws the safe rect and the projected subject bounds over the page so the two can be compared.</li>
+</ul>
+<h4>One clock for Lenis, GSAP and R3F</h4>
+<ol>
+<li>One <code>gsap.ticker</code> callback runs each frame, with <code>gsap.ticker.lagSmoothing(0)</code>. On tiers 1 and 2 <code>gsap.ticker.fps(60)</code> caps 90 Hz and 120 Hz phones.</li>
+<li>It calls <code>lenis.raf(time * 1000)</code>, and <code>lenis.on('scroll', ScrollTrigger.update)</code> keeps DOM reveals in step.</li>
+<li>The scroll store computes the target chapter from <code>lenis.targetScroll</code>. It reads Lenis's target, never its smoothed value, so the smoothing is not applied twice.</li>
+<li><code>stepFollowers(dt)</code> advances the rendered chapter values.</li>
+<li><code>advance(time)</code> runs on a Canvas with <code>frameloop="never"</code>, and time is in seconds. The useFrame callbacks evaluate the poses, add the secondary springs and render.</li>
+<li>Labels projected onto the DOM are written after <code>updateMatrixWorld(true)</code>, in the same tick.</li>
+</ol>
+<p>Steps 4 to 6 are skipped when no station is in view or the tab is hidden. React never re-renders at scroll rate, and the store is a mutable module that holds no React state.</p>
+
+<details><summary>Files and responsibilities</summary>
+<div class="tbl-wrap"><table class="tbl">
+<thead><tr><th>File</th><th>Responsibility</th></tr></thead>
+<tbody>
+<tr><td><code>src/app/(site)/layout.tsx</code></td><td>Fonts, the SmoothScroll provider and site-wide JSON-LD (Organization, ProfessionalService, WebSite), emitted only here</td></tr>
+<tr><td><code>src/app/(site)/page.tsx</code></td><td>The Server Component. It calls <code>getHomeContent()</code>, renders the sections and mounts <code>StageMount</code></td></tr>
+<tr><td><code>src/components/site/sections/*.tsx</code></td><td>One file per section. The root has an <code>id</code>, <code>data-chapter</code>, a <code>.field</code> child and a content wrapper</td></tr>
+<tr><td><code>src/components/site/smooth-scroll.tsx</code></td><td>A client component that sets up ReactLenis, the ticker, ScrollTrigger and centre measurement, and cleans everything up on unmount</td></tr>
+<tr><td><code>src/components/site/stage-mount.tsx</code></td><td>A client component that runs tier detection, the poster and <code>dynamic(() =&gt; import('@/three/stage'), { ssr: false })</code></td></tr>
+<tr><td><code>src/lib/scroll-store.ts</code></td><td>A singleton with no three import. It holds the lenis instance, centres, target, snap flag, velocity and chapter index</td></tr>
+<tr><td><code>src/lib/motion/damp.ts</code></td><td><code>smoothDamp</code> and <code>band</code>, as pure functions with unit tests and the same maths as the previews' <code>common.js</code></td></tr>
+<tr><td><code>src/lib/gpu-tier.ts</code></td><td><code>detectTier()</code> and the <code>QUALITY</code> table</td></tr>
+<tr><td><code>src/three/stage.tsx</code></td><td>The Canvas configuration, the frame driver, PerformanceMonitor and context-loss handling</td></tr>
+<tr><td><code>src/three/rig/follower.ts</code>, <code>framing.ts</code>, <code>stage-fade.ts</code>, <code>pose-eval.ts</code></td><td>The followers, setViewOffset and FOV with the safe-rect fit, the fade-cut and pose interpolation</td></tr>
+<tr><td><code>src/three/poses/tall.ts</code>, <code>wide.ts</code></td><td>Pose data per station</td></tr>
+<tr><td><code>src/three/totems/*.ts</code></td><td>Procedural geometry builders, one per totem kind, each merged and vertex-coloured</td></tr>
+<tr><td><code>src/three/look/materials.ts</code>, <code>environment.tsx</code>, <code>shadows.tsx</code></td><td>The material set, the Lightformer environment rendered once (<code>frames={1}</code>) and grounding by tier</td></tr>
+<tr><td><code>src/three/labels.ts</code></td><td>Projects 3D anchor points to the <code>aria-hidden</code> DOM labels</td></tr>
+</tbody></table></div>
+<p>No visual-system module grows past 300 lines. When a file nears that size, it is split.</p>
+</details>
+
+<h3>4. Motion rules</h3>
+<ul>
+<li><strong>Scroll sets a target only.</strong> Scroll handlers write <code>scroll.target</code> and nothing else. No code writes a transform from a scroll event.</li>
+<li><strong>Follower.</strong> A critically damped <code>smoothDamp</code> on the chapter float. Wide and mid buckets use a smoothTime of 0.45 s and a maxSpeed of 1.6 chapters per second. The tall bucket uses 0.55 s and 1.3 chapters per second. The camera has a parallel follower on the same target with 0.15 s more smoothTime, so the subject drifts slightly inside the frame while travelling. Neither follower reads the other's output.</li>
+<li><strong>Catch-up.</strong> The speed cap is multiplied by <code>1 + 2 * max(0, gap - 1)</code>, where the gap is in chapters. Up to one chapter behind, the cap is unchanged. Two chapters behind, it triples.</li>
+<li><strong>Fade-cut.</strong> When the gap passes 2.5 chapters (an End key press, a nav click or a scrollbar drag), the canvas fades out over 150 ms. While it is invisible, both followers jump to half a chapter before the target. The canvas then fades back in over 200 ms and the followers glide the last half chapter. The first frame and a restored scroll position snap with no fade.</li>
+<li><strong>dt clamp.</strong> <code>dt = Math.min(delta, 1 / 20)</code> in every frame callback, so a tab switch or a hitch cannot cause a jump. All damping is time-based, so 30 Hz Low Power mode, 60 Hz and 120 Hz screens move at the same speed.</li>
+<li><strong>Never damp in series.</strong> The follower is the only smoothing between scroll and the main pose. Poses are pure functions of the rendered chapter. Secondary motion (breathing, tilt, lean, press and hover lift) is added as offsets, each with its own spring, after the pose is evaluated. None of it feeds back into the pose.</li>
+<li><strong>Scroll-driven channels.</strong> Scroll delta is clamped to 60 px per frame in either direction before it feeds anything. Lean from scroll velocity is limited to 5 degrees with a smoothTime of 0.3 s. Any spin driven by scroll is capped at 2.5 radians per second.</li>
+<li><strong>Pointer.</strong> Fine pointers only. Yaw is limited to 6 degrees and pitch to 4 degrees, with a smoothTime of 0.35 s. The environment rotates up to 0.2 radians with a smoothTime of 0.6 s. A hover lift moves a piece by up to 6% of its height, with a smoothTime of 0.25 s. The magnetic CTA moves by 30% of the pointer offset, up to 10 px, through <code>gsap.quickTo</code> over 0.45 s with <code>power3</code>.</li>
+<li><strong>Keyboard input</strong> (Keycap Colorway only). A <code>keydown</code> on the document presses a cap only when no input, textarea, select or contenteditable element has focus and no modifier key is held. The cap travels 4% of its height in 60 ms and returns with a smoothTime of 0.22 s. The handler never calls <code>preventDefault</code>.</li>
+<li><strong>Theme switches.</strong> Fields change at section edges in the DOM, so the wipe follows the scroll exactly. Text and background colours never interpolate. Each section sets its ink colour in CSS for its own field. The stage's environment tint follows the rendered chapter because it lights objects and never sits behind text. <code>scripts/check-contrast.ts</code> checks every field and ink pair against WCAG AA, which means 4.5:1 for body text and 3:1 for large text.</li>
+<li><strong>DOM reveals.</strong> ScrollTrigger reveals play once each. They animate transform and opacity on child elements over 600 ms with <code>cubic-bezier(0.22, 1, 0.36, 1)</code> and a 60 ms stagger. The H1 has no reveal.</li>
+<li><strong>Reduced motion.</strong> Lenis falls back to native scroll, because <code>respectReducedMotion</code> is on by default. The target becomes the nearest station, with no holds and no travel. A station change is a cut. Canvas opacity dips to 0 over 150 ms, the pose switches, and opacity returns over 150 ms. Breathing, tilt, lean, the typing rhythm, the send gesture, the magnetic button and DOM reveals are all off, and content is visible from the start. The totems still render, and fields still change at section edges, since that is ordinary scrolling.</li>
+</ul>
+<p>The follower is the same <code>smoothDamp</code> the previews use, so the motion the user approves in the previews is the motion that ships.</p>
+<pre><code>// src/three/rig/follower.ts  (called once per gsap.ticker frame, before advance)
+import { smoothDamp } from '@/lib/motion/damp'      // same maths as the previews' common.js
+import { scroll } from '@/lib/scroll-store'          // only scroll handlers write scroll.target
+import { stageFade } from '@/three/rig/stage-fade'
+
+const TUNING = {
+  wide: { smoothTime: 0.45, maxSpeed: 1.6 },         // maxSpeed in chapters per second
+  tall: { smoothTime: 0.55, maxSpeed: 1.3 },
+}
+const CUT_GAP = 2.5                                   // chapters
+const subject = { value: 0, velocity: 0 }
+const camera = { value: 0, velocity: 0 }              // parallel follower, never fed by subject
+const out = { subject: 0, camera: 0 }                 // reused, nothing allocated per frame
+
+export function stepFollowers(rawDt: number, bucket: 'wide' | 'tall') {
+  const dt = Math.min(rawDt, 1 / 20)                  // a hitch or tab switch cannot cause a jump
+  const target = scroll.target                        // chapter float with station holds applied
+  if (scroll.snap) {                                  // first frame or restored scroll position
+    subject.value = camera.value = target
+    subject.velocity = camera.velocity = 0
+    scroll.snap = false
+  }
+  const gap = Math.abs(target - subject.value)
+  if (gap &gt; CUT_GAP) stageFade.request()              // canvas fades out over 150 ms
+  if (stageFade.isDark()) {                           // jump while invisible, glide the last half
+    subject.value = camera.value = target - Math.sign(target - subject.value) * 0.5
+    subject.velocity = camera.velocity = 0
+    stageFade.release()                               // canvas fades back in over 200 ms
+  }
+  const { smoothTime, maxSpeed } = TUNING[bucket]
+  const cap = maxSpeed * (1 + 2 * Math.max(0, gap - 1))   // catch-up when far behind
+  smoothDamp(subject, target, smoothTime, dt, cap)
+  smoothDamp(camera, target, smoothTime + 0.15, dt, cap)
+  out.subject = subject.value
+  out.camera = camera.value
+  return out                                          // poses are pure functions of these
+}</code></pre>
+<p>Unit tests in <code>src/lib/motion/damp.test.ts</code> prove three things. Speed never exceeds the cap without catch-up. The value never overshoots the target. Stepping at 30, 60 and 120 Hz gives positions within 1% of each other after one second.</p>
+
+<h3>5. Mobile</h3>
+<h4>Designed composition</h4>
+<ul>
+<li>The phone layout is designed first and reviewed first. On tall screens the totem's centre sits 36 to 40% from the top. In the hero the headline takes the top third, and the CTA and copy sit on a solid card in the bottom 40%.</li>
+<li>In signature stations the totem never drops below 0.85 opacity and fills at least 70% of the viewport width. It is never parked at a screen edge.</li>
+<li>On tall screens the camera favours moves in depth: dolly-in, crane up and a 90-degree orbit. Two stations in a row never use the same move. The world moves around a centred subject, so nothing runs down one side of the screen.</li>
+<li>Copy sits on a solid card in the section's field colour, at full opacity on phones and never below 0.92 anywhere. Text never sits directly on a 3D area.</li>
+</ul>
+<h4>Framing</h4>
+<ul>
+<li><code>camera.setViewOffset</code> shifts the projection centre without turning the camera. The offset comes from the pose's safe rect, never from a constant. On wide screens the subject usually sits in the right third with copy on the left.</li>
+<li>The vertical FOV is derived from a 50-degree horizontal FOV and clamped to 28 to 45 degrees. Beyond about 45 degrees, bevelled forms near the frame edge look visibly distorted. The solver then sets the camera distance so the subject's bounding sphere fits its safe rect with a 6% margin. On tall screens that pulls the camera back instead of widening the lens.</li>
+<li>Framing is recomputed when the width changes or the height changes by more than 15% (an orientation change). Safari's toolbar showing or hiding never triggers it.</li>
+</ul>
+<h4>Quality tiers</h4>
+<p>The tier is chosen in <code>StageMount</code> before three.js is downloaded. It runs a WebGL2 probe that releases its context, checks the Save-Data setting and <code>navigator.deviceMemory</code>, and then runs <code>getGPUTier()</code> against the self-hosted benchmarks. Mobile results are capped at tier 2. At runtime, PerformanceMonitor with <code>flipflops={3}</code> only steps down. <code>onDecline</code> drops one tier (never below 1), and <code>onFallback</code> sets tier 1. If tier 1 stays below 30 fps for 5 s, the stage fades to the posters. The tier never steps up during a visit, and each tier has a fixed DPR. <code>?tier=0</code> to <code>?tier=3</code> forces a tier in dev and preview builds.</p>
+<div class="tbl-wrap"><table class="tbl">
+<thead><tr><th>Tier</th><th>Who gets it</th><th>What renders</th><th>What it drops</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>Devices without WebGL2, Save-Data on, GPU benchmark tier 0, or a second context loss in the same visit</td><td>AVIF posters in each stage zone, the DOM fields and all content. three.js is never requested</td><td>The live canvas</td></tr>
+<tr><td>1</td><td>Low GPU tier, 4 GB of device memory or less, or a step down from tier 2</td><td>The live stage at DPR up to 1.25 with half the geometry segments, blob shadow textures and a 64-pixel environment</td><td>Iridescence and sheen on the glass piece, ContactShadows and decorative instances. Target 45 draw calls or fewer</td></tr>
+<tr><td>2</td><td>Phones and tablets, and mid-range laptops</td><td>DPR up to 1.5, 0.75 of the geometry segments, ContactShadows rendered once per station (<code>frames={1}</code>, baked again when the follower settles), a 128-pixel environment, capped at 60 fps</td><td>Shadows that update while pieces move, and frame rates above 60</td></tr>
+<tr><td>3</td><td>Desktop GPUs</td><td>DPR up to 2, full segments, ContactShadows that update while pieces move, a 256-pixel environment, no frame cap</td><td>Nothing</td></tr>
+</tbody></table></div>
+<p>The glass or resin hero piece uses fake glass on every tier, made from a physical material with clearcoat, a slight opacity and an inner coloured core. Real transmission is ruled out because it samples a cleared buffer that cannot see the DOM field behind a transparent canvas.</p>
+<h4>Poster fallback</h4>
+<ul>
+<li><code>scripts/posters.ts</code> renders the live scene through the dev route <code>/dev/stage?station=hero&amp;bucket=tall&amp;still=1</code> with Playwright. It captures 390 by 844 and 1440 by 900 at 2x and encodes AVIF with sharp. The hero poster must be 120 KB or less and each station still 60 KB or less.</li>
+<li>The hero poster is a <code>&lt;picture&gt;</code> with an aspect media query. Its box reserves the stage zone with <code>aspect-ratio</code>, so the handover causes no layout shift. On tier 0, station stills load lazily in their stage zones.</li>
+<li>Posters are regenerated in the same commit as any change to poses or materials. <code>npm run verify</code> warns when files in <code>src/three</code> are newer than the posters.</li>
+</ul>
+<h4>iOS resize hardening</h4>
+<ul>
+<li>The canvas wrapper is fixed at <code>100lvh</code>, so it never resizes when the toolbar collapses. Sections use <code>svh</code> minimums. The canvas never uses <code>100vh</code> or <code>dvh</code>.</li>
+<li>R3F is configured with <code>resize={{ scroll: false, debounce: { scroll: 0, resize: 200 } }}</code>. DPR is fixed per tier and never changes while scrolling, because every change reallocates the canvas.</li>
+<li>Only one WebGL context exists on the site. On <code>webglcontextlost</code> the stage calls <code>preventDefault()</code>, shows the poster and remounts once on <code>webglcontextrestored</code>. A second loss sets tier 0 for the rest of the visit.</li>
+<li>Geometries, materials and textures are disposed on unmount, and textures are 1024 pixels or smaller on phones.</li>
+<li>Test devices are a non-Pro iPhone on current iOS Safari (including Low Power mode at 30 fps), a Snapdragon 7-series Android phone in Chrome, and an iPad.</li>
+</ul>
+<h4>Touch</h4>
+<ul>
+<li>R3F events are attached only for fine pointers, through <code>eventSource={document.body}</code> with <code>eventPrefix="client"</code>. On coarse pointers the canvas handles no events. Hover targets are invisible low-poly proxies with <code>raycast={meshBounds}</code>.</li>
+<li>On touch, the totems lean with clamped scroll velocity instead of pointer tilt. Device orientation is not used, because it triggers a permission prompt on iOS.</li>
+<li>No feature depends on hover alone. Links and buttons are at least 44 px. Nothing sets <code>touch-action: none</code>, and Lenis <code>syncTouch</code> stays off, so native momentum scrolling is untouched.</li>
+</ul>
+
+<h3>6. Performance budget</h3>
+<div class="tbl-wrap"><table class="tbl">
+<thead><tr><th>Measure</th><th>Phone (tier 2)</th><th>Desktop (tier 3)</th><th>How it is measured</th></tr></thead>
+<tbody>
+<tr><td>Frame rate</td><td>Steady 60 fps on a Snapdragon 7-series or Pixel 6a to 7a class phone. Below 45 fps for 3 s, the tier steps down</td><td>60 fps, up to 120 when the frame stays under 8 ms</td><td>stats-gl in <code>?debug=stage</code>, and a remote-debugging trace on the device</td></tr>
+<tr><td>JS per frame (ticker, followers, useFrame, labels)</td><td>3 ms or less</td><td>2 ms or less</td><td>Performance trace</td></tr>
+<tr><td>GPU per frame</td><td>10 ms or less</td><td>8 ms or less</td><td>Performance trace</td></tr>
+<tr><td>Draw calls</td><td>60 or fewer</td><td>150 or fewer</td><td><code>renderer.info.render.calls</code> in the debug overlay</td></tr>
+<tr><td>Visible triangles</td><td>150k or fewer</td><td>500k or fewer</td><td><code>renderer.info.render.triangles</code></td></tr>
+<tr><td>Shader programs</td><td>12 or fewer, all compiled before reveal</td><td>12 or fewer</td><td><code>renderer.info.programs.length</code></td></tr>
+<tr><td>DPR cap</td><td>1.5 (1.25 on tier 1)</td><td>2</td><td>QUALITY table</td></tr>
+<tr><td>Textures</td><td>1024 pixels or smaller each</td><td>2048 pixels for one hero texture at most</td><td>Texture audit in the debug overlay</td></tr>
+<tr><td>Initial route JS, gzip</td><td colspan="2">180 KB or less, with no three, R3F or drei</td><td><code>next analyze</code></td></tr>
+<tr><td>Lazy 3D chunk, gzip</td><td colspan="2">300 KB or less (three, R3F, the drei parts used, maath and the scene code)</td><td><code>next analyze</code></td></tr>
+<tr><td>Admin routes</td><td colspan="2">Zero bytes of three, R3F, GSAP or Lenis</td><td><code>next analyze</code> and the import audit</td></tr>
+<tr><td>Total 3D payload</td><td>1 MB or less</td><td>1.5 MB or less</td><td>Network panel, cache disabled</td></tr>
+<tr><td>Posters</td><td colspan="2">Hero AVIF 120 KB or less per aspect, station stills 60 KB or less</td><td>File size check in verify</td></tr>
+<tr><td>Fonts</td><td colspan="2">Three woff2 files or fewer, Latin subset, 150 KB or less in total, only the display face preloaded</td><td>Network panel</td></tr>
+<tr><td>LCP</td><td>2.5 s or less</td><td>1.5 s or less</td><td>Lighthouse lab, then field data via <code>web-vitals</code></td></tr>
+<tr><td>CLS</td><td colspan="2">0.05 or less, including the poster-to-canvas handover</td><td>Lighthouse and <code>web-vitals</code></td></tr>
+<tr><td>INP</td><td colspan="2">200 ms or less (menu, form, nav)</td><td><code>web-vitals</code></td></tr>
+<tr><td>3D start-up on the main thread</td><td colspan="2">300 ms or less in total, with no single task over 50 ms. Geometry builds are split across frames, and <code>gl.compileAsync</code> plus Preload run before reveal</td><td>Performance trace</td></tr>
+<tr><td>First live frame</td><td>3.5 s or less on Fast 4G</td><td>1.5 s or less</td><td>A <code>data-stage="ready"</code> timestamp in the debug overlay</td></tr>
+<tr><td>Lighthouse mobile</td><td colspan="2">Performance 85 or higher, Accessibility 100, Best Practices 95 or higher, SEO 100</td><td>Lighthouse CLI on a production build</td></tr>
+</tbody></table></div>
+
+<h3>7. Lessons from the previous projects</h3>
+<div class="tbl-wrap"><table class="tbl">
+<thead><tr><th>What went wrong</th><th>Rule for ProDevly</th></tr></thead>
+<tbody>
+<tr><td>Travel site. The car's position was one page pixel per scroll pixel, written from a passive scroll listener. A <code>smoothDamp</code> helper with a speed cap existed but had no callers, so the car was too fast to follow.</td><td>Scroll writes only a target. One <code>smoothDamp</code> follower with a speed cap and catch-up moves everything, and unit tests prove the cap.</td></tr>
+<tr><td>Travel site. Position ran on the compositor, heading in a separate WebGL render gated by a threshold, idle motion on a 30 Hz interval, and the canvas buffer resized in steps. Motion looked jerky.</td><td>One fixed canvas and one clock, <code>gsap.ticker</code>. Every transform comes from the same state in the same frame. The canvas never resizes during scroll.</td></tr>
+<tr><td>Travel site. On phones the road was a 30 px ribbon in a 36 px left gutter and the car was drawn at 0.55 opacity. Jindal. The bar was parked at the right edge at 0.25 to 0.5 opacity by multipliers inside the frame loop.</td><td>The phone composition is designed first, with the totem centred between copy blocks and at 0.85 opacity or more in signature stations. Poses are data per aspect bucket and fit named safe rects. Screenshots at 375 and 390 are reviewed before 1440.</td></tr>
+<tr><td>Travel site. The totems were flat SVG polygons with ink strokes, and the 3D totem spec was never built.</td><td>Totems are lit 3D meshes. They have bevels, physical materials with roughness set per material class, a Lightformer environment and Neutral tone mapping, and contact or blob shadows to ground them.</td></tr>
+<tr><td>Jindal. Seven of nine poses were nearly the same centred pose, every section used the same 5-and-5 column layout, and sections were padded to 130 to 150dvh to create scroll distance.</td><td>Each station changes at least two of position, scale, framing, material and form. No more than two sections in a row share a layout family. Sections get their height from their content, with at most two short sticky pins.</td></tr>
+<tr><td>Jindal. Spin was added from raw scroll delta with no clamp, so the ribs strobed on anchor jumps.</td><td>Every scroll-driven channel goes through the follower or a clamped velocity. Rotation is capped at 2.5 rad/s, scroll delta at 60 px per frame, and jumps over 2.5 chapters become a fade-cut.</td></tr>
+<tr><td>Jindal artistic-b. Background and text colours were blended together, so the page passed through mid-grey with contrast near 1:1 while text was on screen.</td><td>Fields change only at DOM section edges, and text colours never interpolate. A script checks every field and ink pair against WCAG AA.</td></tr>
+<tr><td>Jindal. The page theme was set from inside useFrame. There was no poster or fallback, and the H1 was hidden until hydration.</td><td>The page is complete without the canvas. It has a server-rendered H1 that paints first, DOM fields, AVIF posters, a WebGL2 check and context-loss handling.</td></tr>
+<tr><td>Jindal. The signature cut was a crossfade from the rod mesh to a separate sample mesh, with every material left transparent.</td><td>Signature beats transform the same pieces continuously through assembly parameters. Materials stay opaque except the one glass piece.</td></tr>
+<tr><td>Jindal. The canvas rendered through every section, particles were updated on the CPU, and colours were allocated several times per frame.</td><td>The stage pauses when no station is in view or the tab is hidden. Repeated decor moves in vertex shaders, and the frame loop allocates nothing because scratch objects live at module scope.</td></tr>
+<tr><td>Travel site. Invented trip counts, a rating out of five and six invented testimonials shipped on the public site.</td><td>No number appears without a record behind it, and sections hide when empty. A source grep and a rendered-text check in <code>npm run verify</code> enforce this.</td></tr>
+<tr><td>Travel site. Web3Forms was called from the server, where the free plan returns 403, and the failure was swallowed.</td><td>Web3Forms is called from the browser with a domain-restricted key, and a copy goes to <code>/api/leads</code>. When both fail, the visitor sees an error with a mailto fallback.</td></tr>
+<tr><td>Travel site. The direction changed three times in a day. That left about 1,100 lines of dead journey code and a road system of about 5,000 lines with open blockers, all uncommitted.</td><td>The user locks the direction from the previews before M0. Visual modules stay under 300 lines, superseded code is deleted in the same commit, and every milestone is committed on a branch.</td></tr>
+<tr><td>Jindal. Each branch was generated in one commit and never iterated. The README described GSAP that nothing imported, and the phone menu was squashed to 0 px inside a blurred header.</td><td>Vertical slices with screenshot, Lighthouse and axe gates. <code>DESIGN.md</code> changes in the same commit as the code it describes. knip catches unused dependencies, and menus and modals are native dialogs portalled to <code>body</code>.</td></tr>
+</tbody></table></div>
+
+<h3>8. Build milestones</h3>
+<pre class="mermaid">
+flowchart LR
+  M0[M0 Setup] --> M1[M1 Admin core]
+  M1 --> M2[M2 Hero slice]
+  M2 --> M3[M3 Services and partners]
+  M3 --> M4[M4 Work]
+  M4 --> M5[M5 Pricing]
+  M5 --> M6[M6 Team]
+  M6 --> M7[M7 Contact, nav, footer]
+  M7 --> M8[M8 Mobile pass]
+  M8 --> M9[M9 Performance pass]
+  M9 --> M10[M10 Release check]
+  M1 -.-> ADM[Other admin modules in parallel]
+  ADM -.-> M10
+</pre>
+<h4>The gate every milestone from M2 on must pass</h4>
+<ol>
+<li><code>npm run verify</code> passes. It runs <code>tsc --noEmit</code>, ESLint, <code>check-public-copy</code>, <code>check-rendered-copy</code>, <code>check-stacking</code>, <code>check-contrast</code>, knip and the import audit. The audit fails if a client file reaches models, the database or auth, or if an admin file reaches three, R3F, GSAP or Lenis.</li>
+<li><code>npm run shoot</code> uses Playwright to capture 375 by 812, 768 by 1024 and 1440 by 900 at every station's hold position (<code>?jump=station</code>) and at the midpoint of every transition. It runs once with reduced motion off and once with it on. From M3 on it also captures 360 by 800 and 390 by 844. The shots are reviewed next to the approved preview frames for text over busy 3D, totem opacity and the two-of-five change rule.</li>
+<li>Lighthouse runs the mobile and desktop presets on a production build and must meet the budgets in section 6.</li>
+<li>axe runs through <code>@axe-core/playwright</code> on every captured state and must report zero serious or critical violations.</li>
+<li>The work is committed on the feature branch, with <code>DESIGN.md</code> updated in the same commit.</li>
+</ol>
+
+<h4>M0. Project setup</h4>
+<ul>
+<li><strong>Scope.</strong> Create the Next app with TypeScript and the App Router, using the exact pins from section 1. Add Node 22 to <code>.nvmrc</code>, Tailwind 4.2.4 through <code>@tailwindcss/postcss</code>, and the chosen direction's tokens in <code>@theme</code> (fields, inks, type scale and grid unit). Load the direction's three families with <code>next/font</code>. Write <code>scroll-store.ts</code> and <code>damp.ts</code> with unit tests, the verify scripts, and the Playwright and axe harness with <code>?jump=</code>. Commit <code>.env.example</code> (gitignore <code>.env*</code> with <code>!.env.example</code>). Define the port once in <code>package.json</code>. Add <code>CONTRACT.md</code>, which overrides every brief, and <code>DESIGN.md</code>. Set security headers and a CSP that allows <code>api.web3forms.com</code>.</li>
+<li><strong>Gate.</strong> <code>npm run build</code> and <code>npm run verify</code> pass on an empty database. The skeleton home page renders hero, services, contact and footer, and hides the four data sections. The smoothDamp tests pass (cap held, no overshoot, the same result at 30, 60 and 120 Hz).</li>
+</ul>
+<h4>M1. Admin core</h4>
+<ul>
+<li><strong>Scope.</strong> Auth as specified in the admin section, with the <code>superadmin</code> and <code>admin</code> roles. Superadmins can create and delete admins, and the last superadmin cannot be deleted. Add the seed for Aman Gupta, Lakshya Sharma and Shivansh Kaushik. Build the four public-content modules the home page reads (partners, showcase projects, pricing plans and developer profiles), each with a publish flag, ordering, image upload and tag revalidation. The other admin modules (clients, tasks, payments, third parties, expenses and dashboards) follow the admin plan and run in parallel with M3 to M7.</li>
+<li><strong>Gate.</strong> A smoke test signs in as each seeded superadmin, creates and deletes an admin, and confirms that deleting the last superadmin is refused. Publishing a partner makes the band appear on <code>/</code> after revalidation, and unpublishing hides it again. <code>check-rendered-copy</code> passes in both empty and fixture modes. <code>next analyze</code> shows no 3D or scroll libraries in the admin bundles.</li>
+</ul>
+<h4>M2. Hero slice and stage foundation</h4>
+<ul>
+<li><strong>Scope.</strong> SmoothScroll wiring, centre measurement, StageMount with tier detection and the dynamic import, and the Stage canvas. Add the followers, the fade-cut, the framing solver, the pose tables for the hero plus one travel station, and the direction's environment and materials. Build the hero totem procedurally to the preview's spec. Add poster generation, context-loss handling, the reduced-motion path and the <code>?debug=stage</code> overlay (target and rendered chapter, speed, fps, calls, triangles, programs, tier, safe rect and projected bounds).</li>
+<li><strong>Gate.</strong> The common gate passes. The hero at 375, 768 and 1440 matches the approved preview composition. A scripted fling of 4,000 px of wheel input keeps the rendered speed at or under the cap outside catch-up, with no frame spending more than 8 ms in JS. The End key from the hero triggers exactly one fade-cut. Forcing <code>?tier=0</code> shows the full page with posters and makes no three.js request. A simulated context loss swaps to the poster. CLS stays at 0.05 or less across the poster handover, and hero LCP is 2.5 s or less on Lighthouse mobile.</li>
+</ul>
+<h4>M3. Services station and partners band</h4>
+<ul>
+<li><strong>Scope.</strong> The services DOM and the process strip. The one-becomes-many beat, plus the service row to piece binding for hover, focus and the centred row on touch. The partners band and its travel segment.</li>
+<li><strong>Gate.</strong> The common gate passes at all five widths. The beat transforms the hero pieces continuously, with no mesh crossfade. Layouts are checked with partners both empty and filled.</li>
+</ul>
+<h4>M4. Work station</h4>
+<ul>
+<li><strong>Scope.</strong> Project cards, one piece per project up to six, the binding to each card's span, and covers through <code>next/image</code>.</li>
+<li><strong>Gate.</strong> Fixture sets of 0, 1, 3 and 8 projects all render correctly in the DOM and in 3D. With 0, the station and nav link are gone and services travels straight to pricing.</li>
+</ul>
+<h4>M5. Pricing station</h4>
+<ul>
+<li><strong>Scope.</strong> Plan cards, price formatting, a quoted plan, plan pre-selection in the form, and one element per plan.</li>
+<li><strong>Gate.</strong> One to four plans and a quoted plan all render. Digits appear only inside <code>data-source="db"</code>.</li>
+</ul>
+<h4>M6. Team station</h4>
+<ul>
+<li><strong>Scope.</strong> The people grid, initial monograms, and initial textures generated at runtime.</li>
+<li><strong>Gate.</strong> Fixture sets of 0, 1, 5 and 9 people render correctly. <code>renderer.info.memory.textures</code> returns to its baseline after the stage unmounts and mounts again.</li>
+</ul>
+<h4>M7. Contact, navbar and footer</h4>
+<ul>
+<li><strong>Scope.</strong> The form with Web3Forms and <code>/api/leads</code>, its states, and the send gesture. The final navbar (data-driven anchors, active marker, dialog menu). The footer and the render pause after contact.</li>
+<li><strong>Gate.</strong> A submission reaches Web3Forms with the real key on a preview deployment. With the network blocked, the form shows its error state and mailto fallback. The form can be completed by keyboard alone. The debug counter shows zero GPU frames while the footer fills the viewport.</li>
+</ul>
+<h4>M8. Mobile pass</h4>
+<ul>
+<li><strong>Scope.</strong> Every station on the three test devices. Refine the tall-bucket poses and the copy cards, and test touch, toolbar show and hide, and orientation changes.</li>
+<li><strong>Gate.</strong> Screenshots of every station at 360, 375, 390 and 768 are reviewed. No totem drops below 0.85 opacity in a signature station, and no text sits over 3D without a card. A trace on the Android device shows 60 fps on tier 2 across a full scroll. The debug counter shows zero canvas resizes during scroll.</li>
+</ul>
+<h4>M9. Performance pass</h4>
+<ul>
+<li><strong>Scope.</strong> Measure every budget and check the bundle split and the shader count. Confirm <code>compileAsync</code> and Preload run before reveal and that geometry builds are split across frames. Regenerate the posters and subset the fonts.</li>
+<li><strong>Gate.</strong> Every row of section 6 is measured and recorded in <code>docs/perf.md</code> with the device and build hash. Lighthouse mobile reaches Performance 85 or higher, Accessibility 100, Best Practices 95 or higher and SEO 100.</li>
+</ul>
+<h4>M10. Release check</h4>
+<ul>
+<li><strong>Scope.</strong> Metadata and Open Graph image, sitemap and robots, the 404 page and the Privacy page. Run a full keyboard pass and a final contrast check. Confirm the Web3Forms domain restriction and run <code>npm run db:indexes</code> before traffic.</li>
+<li><strong>Gate.</strong> The common gate passes on the production deployment, and the user signs off on the 375 and 1440 screenshot sets.</li>
+</ul>
+
+<h3>9. Skills now installed and where each is used</h3>
+<div class="tbl-wrap"><table class="tbl">
+<thead><tr><th>Skill</th><th>Source</th><th>Where it is used</th></tr></thead>
+<tbody>
+<tr><td><span class="chip">impeccable</span></td><td>pbakaus/impeccable</td><td>Design critique, polish and audit at every slice gate, and a copy clarity check on section text. Its product schema already lives in <code>PRODUCT.md</code>.</td></tr>
+<tr><td><span class="chip">design-taste-frontend</span></td><td>Leonxlnx/taste-skill</td><td>An anti-template check on each DOM section before review, as a second opinion beside impeccable.</td></tr>
+<tr><td><span class="chip">frontend-design</span></td><td>anthropics/skills</td><td>Type scale, spacing and layout families for the chosen direction's DOM (M0, M3 to M7).</td></tr>
+<tr><td><span class="chip">build-awwwards-quality-sites</span></td><td>MengTo/Skills</td><td>The acceptance bar for the hero and each station, and honest sourcing of logos and photos.</td></tr>
+<tr><td><span class="chip">build-threejs-scroll-worlds</span></td><td>MengTo/Skills</td><td>The station ledger, one persistent world and mobile composition rules (M2 to M6, M8).</td></tr>
+<tr><td><span class="chip">cinematic-gsap-lenis-motion-system</span></td><td>MengTo/Skills</td><td>Lenis and ticker wiring, motion tokens and reveal timing (M2, M7).</td></tr>
+<tr><td><span class="chip">r3f-fundamentals</span> <span class="chip">r3f-animation</span></td><td>EnzeD/r3f-skills</td><td>Canvas setup, <code>frameloop="never"</code> with <code>advance()</code>, useFrame discipline and disposal (M2).</td></tr>
+<tr><td><span class="chip">r3f-geometry</span> <span class="chip">r3f-materials</span> <span class="chip">r3f-lighting</span> <span class="chip">r3f-textures</span> <span class="chip">r3f-shaders</span></td><td>EnzeD/r3f-skills</td><td>Merged vertex-coloured totems, physical materials and fake glass, the Lightformer environment and contact shadows, canvas legend and initial textures, glaze wobble and dished keycap tops (M2 to M6).</td></tr>
+<tr><td><span class="chip">r3f-interaction</span></td><td>EnzeD/r3f-skills</td><td>The body event source, pointer tilt and invisible hover proxies (M3).</td></tr>
+<tr><td><span class="chip">r3f-loaders</span> <span class="chip">r3f-postprocessing</span> <span class="chip">r3f-physics</span></td><td>EnzeD/r3f-skills</td><td>Not needed at launch. Loaders apply only if a GLB is added, postprocessing only if tier-3 bloom is approved, and Rapier stays out.</td></tr>
+<tr><td><span class="chip">gsap-core</span> <span class="chip">gsap-timeline</span> <span class="chip">gsap-scrolltrigger</span> <span class="chip">gsap-react</span> <span class="chip">gsap-plugins</span> <span class="chip">gsap-utils</span> <span class="chip">gsap-performance</span></td><td>greensock/gsap-skills</td><td>DOM reveals, SplitText headings, ScrollTrigger refresh, <code>useGSAP</code> cleanup, the quickTo magnetic button, clamp and mapRange helpers, and animating only transform and opacity (M2 to M7).</td></tr>
+<tr><td><span class="chip">emil-design-eng</span> <span class="chip">animate</span> <span class="chip">review-animations</span> <span class="chip">improve-animations</span></td><td>emilkowalski/skills</td><td>Micro-interactions for buttons, form states and the menu, and a motion review at each station gate (M3 to M8).</td></tr>
+<tr><td><span class="chip">web-quality-audit</span> <span class="chip">performance</span> <span class="chip">core-web-vitals</span> <span class="chip">accessibility</span> <span class="chip">seo</span> <span class="chip">best-practices</span></td><td>addyosmani/web-quality-skills</td><td>The audits in every gate, the M9 performance pass and the M10 SEO work.</td></tr>
+<tr><td><span class="chip">next-bundle-optimizer</span></td><td>vercel/next.js</td><td><code>next analyze</code> audits that keep three out of the initial and admin bundles (M1, M2, M9).</td></tr>
+<tr><td><span class="chip">vercel-react-best-practices</span> <span class="chip">nextjs-app-router-patterns</span></td><td>vercel-labs, wshobson</td><td>Server Component data loading and client boundaries. Both rank below <code>node_modules/next/dist/docs</code>, which matches the installed Next version.</td></tr>
+<tr><td><span class="chip">vercel-react-view-transitions</span></td><td>vercel-labs/agent-skills</td><td>Admin list-to-detail transitions and any later <code>/work/[slug]</code> page. The single-page home does not use it.</td></tr>
+<tr><td><span class="chip">tailwind-design-system</span></td><td>wshobson/agents</td><td><code>@theme</code> tokens for Tailwind 4.2 and the <code>pd-</code> house utilities (M0).</td></tr>
+<tr><td><span class="chip">interface-design</span></td><td>Dammyjay93/interface-design</td><td>The admin panel's UI system, saved to <code>.interface-design/system.md</code> (M1 and the admin milestones).</td></tr>
+<tr><td><span class="chip">mongodb</span> <span class="chip">mongoose-mongodb</span> <span class="chip">mern-patterns</span></td><td>Community skills</td><td>Public-content schemas, projections, indexes and the cached connection (M1).</td></tr>
+<tr><td><span class="chip">web-design-guidelines</span></td><td>vercel-labs/agent-skills</td><td>A UI review against the Web Interface Guidelines at M7 and M10.</td></tr>
+<tr><td><span class="chip">find-skills</span></td><td>vercel-labs/skills</td><td>Finding another skill when a gap shows up.</td></tr>
+</tbody></table></div>
+<p>The pmndrs Claude Code plugin (live R3F and drei docs plus working examples) is recommended before M2 but is not installed. It installs as a plugin, so the user runs <code>claude plugin marketplace add pmndrs/claude-code-plugin</code> and then <code>claude plugin install pmndrs@pmndrs</code> in a terminal. The installed prisma skills and the auth-provider skills are not used by the frontend.</p>

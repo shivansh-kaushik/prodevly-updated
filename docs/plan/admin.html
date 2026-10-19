@@ -1,0 +1,934 @@
+<p>This part of the plan covers the admin panel at <code>/admin</code> and the backend shared with the public site. It reuses the backend patterns that worked in the tour-travel-3d CRM and fixes the gaps its audit found. Every number in the panel comes from records the team enters. The panel never shows sample figures.</p>
+<p><span class="chip">Next.js 16.4 App Router</span> <span class="chip">TypeScript strict</span> <span class="chip">Tailwind 4</span> <span class="chip">MongoDB + Mongoose 9.11</span> <span class="chip">zod 4</span> <span class="chip">jose 6 + bcryptjs 3</span> <span class="chip">recharts 3</span> <span class="chip">Node 22 LTS</span></p>
+<p>Versions are re-checked against <code>npm view</code> and <code>node_modules</code> at install time. Mongoose 9 needs Node 20.19 or later, so the project pins Node 22 LTS in <code>.nvmrc</code> and <code>engines</code>.</p>
+
+<h3>1. Roles and permissions</h3>
+<p>There are two access roles. <code>superadmin</code> is held by Aman Gupta, Lakshya Sharma and Shivansh Kaushik at launch and can see and change everything. <code>admin</code> is every other team member. Job titles such as Frontend developer or Project manager live in a separate job-role field and grant no access.</p>
+<p>Code checks capabilities and never role names. <code>ROLE_DEFAULTS</code> maps each role to a set of capabilities. An admin's effective capabilities are the role defaults plus any grants a superadmin has switched on for that person. The sidebar, buttons and money columns hide when a capability is missing, and every page, route handler and service checks the capability again on the server.</p>
+<p>Key for the table. <strong>SA</strong> means superadmins. <strong>A</strong> means every admin by default. <strong>G</strong> means an admin only after a superadmin grants it. <strong>Own</strong> means records the admin created or is assigned to.</p>
+<div class="tbl-wrap"><table class="tbl">
+<thead><tr><th>Module</th><th>View</th><th>Create and edit</th><th>Archive, void or delete</th><th>Approve, publish or mark paid</th></tr></thead>
+<tbody>
+<tr><td>Overview</td><td>SA. A sees tiles only for modules they can view</td><td>No one</td><td>No one</td><td>No one</td></tr>
+<tr><td>Clients</td><td>SA, A</td><td>SA, A</td><td>Archive SA, G. Permanent delete SA, only when nothing links to the client</td><td>No step</td></tr>
+<tr><td>Projects</td><td>SA, A. Contract value, received and margin need payment view (SA, G)</td><td>SA, A, including status and health changes</td><td>Archive SA, G</td><td>No step</td></tr>
+<tr><td>Tasks</td><td>SA, A</td><td>SA, A (create, edit, assign, change status)</td><td>Cancel SA, A. Permanent delete SA, only with no work logs or money links</td><td>No step</td></tr>
+<tr><td>Work logs</td><td>SA all. A own. G all</td><td>SA any. A own within the edit window</td><td>SA any. A own within the edit window</td><td>No step</td></tr>
+<tr><td>Client payments</td><td>SA, G</td><td>SA, G</td><td>Void SA</td><td>No step. A recorded receipt is final until voided</td></tr>
+<tr><td>Third parties and payouts</td><td>Directory SA, A. Work orders and payouts SA, G. Payment notes SA only</td><td>Third parties, work orders and payouts in status due SA, G</td><td>Void SA</td><td>Mark paid SA</td></tr>
+<tr><td>Expenses</td><td>SA all. G all. A own</td><td>Submit own out-of-pocket expense SA, A. Record company or project expense SA, G</td><td>Reject and void SA</td><td>Approve and mark paid or reimbursed SA</td></tr>
+<tr><td>Team and roles</td><td>Directory and workload SA, A. Pay profiles and payouts SA, A own</td><td>Profiles SA, A own basic fields (phone, skills, photo). Job roles SA. Team payouts SA</td><td>Void team payout SA</td><td>Mark team payout paid SA</td></tr>
+<tr><td>Admins</td><td>SA</td><td>SA (create, role, grants, reset password)</td><td>Remove (deactivate) and reactivate SA</td><td>No step</td></tr>
+<tr><td>Website content</td><td>SA, A</td><td>SA, A (drafts)</td><td>Archive SA, G</td><td>Publish and unpublish SA, G</td></tr>
+<tr><td>Enquiries</td><td>SA, A</td><td>SA, A (status, notes, assignee, follow-up, convert to client)</td><td>Mark spam SA, A. Permanent delete SA</td><td>No step</td></tr>
+<tr><td>Settings and FX</td><td>SA. A can read FX rates</td><td>Settings SA. FX rates SA, G</td><td>No one</td><td>No step</td></tr>
+<tr><td>Audit log</td><td>SA all. A own activity</td><td>Written by the system only</td><td>No one</td><td>No step</td></tr>
+<tr><td>CSV export</td><td>SA, G</td><td>No step</td><td>No step</td><td>No step</td></tr>
+</tbody></table></div>
+
+<details><summary>Capability list, role defaults and grantable set</summary>
+<h4>Capabilities in <code>src/config/capabilities.ts</code></h4>
+<ul>
+<li><code>dashboard:view</code></li>
+<li><code>client:view</code> <code>client:edit</code> <code>client:archive</code> <code>client:delete</code></li>
+<li><code>project:view</code> <code>project:edit</code> <code>project:archive</code></li>
+<li><code>task:view</code> <code>task:edit</code> <code>task:delete</code></li>
+<li><code>worklog:own</code> <code>worklog:viewAll</code> <code>worklog:editAll</code></li>
+<li><code>payment:view</code> <code>payment:record</code></li>
+<li><code>thirdParty:view</code> <code>thirdParty:edit</code> <code>thirdParty:payDetails</code> <code>payout:view</code> <code>payout:record</code></li>
+<li><code>expense:submit</code> <code>expense:view</code> <code>expense:record</code></li>
+<li><code>money:approve</code> <code>money:void</code></li>
+<li><code>team:view</code> <code>team:payView</code> <code>teamPayout:record</code></li>
+<li><code>admin:manage</code></li>
+<li><code>content:edit</code> <code>content:publish</code></li>
+<li><code>lead:view</code> <code>lead:edit</code> <code>lead:delete</code></li>
+<li><code>settings:edit</code> <code>fx:edit</code> <code>audit:viewAll</code> <code>export:data</code></li>
+</ul>
+<h4>Role defaults</h4>
+<ul>
+<li><code>superadmin</code> has every capability.</li>
+<li><code>admin</code> has <code>dashboard:view</code>, <code>client:view</code>, <code>client:edit</code>, <code>project:view</code>, <code>project:edit</code>, <code>task:view</code>, <code>task:edit</code>, <code>worklog:own</code>, <code>thirdParty:view</code>, <code>expense:submit</code>, <code>team:view</code>, <code>content:edit</code>, <code>lead:view</code>, <code>lead:edit</code>.</li>
+</ul>
+<h4>Grantable to an admin</h4>
+<ul>
+<li><code>client:archive</code>, <code>project:archive</code>, <code>worklog:viewAll</code>, <code>payment:view</code>, <code>payment:record</code>, <code>thirdParty:edit</code>, <code>payout:view</code>, <code>payout:record</code>, <code>expense:view</code>, <code>expense:record</code>, <code>content:publish</code>, <code>fx:edit</code>, <code>export:data</code>.</li>
+<li>Grants have dependencies. <code>payment:record</code> switches on <code>payment:view</code>, <code>payout:record</code> switches on <code>payout:view</code>, and <code>expense:record</code> switches on <code>expense:view</code>. The grant form shows them as module switches with a view level and a record level.</li>
+<li>Never grantable. <code>admin:manage</code>, <code>money:approve</code>, <code>money:void</code>, <code>team:payView</code>, <code>teamPayout:record</code>, <code>thirdParty:payDetails</code>, <code>settings:edit</code>, <code>audit:viewAll</code>, <code>worklog:editAll</code>, <code>client:delete</code>, <code>task:delete</code>, <code>lead:delete</code>.</li>
+</ul>
+</details>
+
+<h4>Hard rules</h4>
+<ol>
+<li>Only superadmins manage admins. That covers create, change role, change grants, reset password, remove and reactivate. <code>admin:manage</code> cannot be granted.</li>
+<li>No one can remove, deactivate or demote their own account. The API answers <code>SELF_ACTION</code> (403).</li>
+<li>The system refuses any change that would leave zero active superadmins and answers <code>LAST_SUPERADMIN</code> (409). The count and the write run in one transaction, and the transaction also increments the guard document <code>counters/superadmin-guard</code>. Two superadmins acting at the same moment therefore conflict, one transaction retries, and the retry fails the check.</li>
+<li>Delete means deactivate. Removing an admin sets <code>status: 'deactivated'</code>, stores who removed them, when and why, and increments <code>tokenVersion</code>, which ends every session on the next request. The account, its work logs, payouts and audit entries stay. The remove dialog lists the person's open tasks so they can be reassigned in the same step. The email stays reserved. To bring the person back a superadmin reactivates the account and the person must set a new password.</li>
+<li>A superadmin can demote or remove another superadmin, subject to rules 2 and 3. Creating a superadmin, demoting or removing one, changing grants, resetting a password, editing pay profiles and exporting data all need step-up. The superadmin re-enters their own password and the step-up stays valid for 10 minutes.</li>
+<li>Per-admin grants are optional and decided by superadmins on the admin's page. Capabilities are read from the database on every request, so a change applies on the next click. Each change is written to the audit log with the before and after sets.</li>
+<li>Admins cannot change their own role, grants or pay profile.</li>
+<li>Business records are archived. Money entries are voided with a reason and are never deleted. Permanent delete exists only for clients, tasks, enquiries and media with nothing linked to them, and only for superadmins.</li>
+</ol>
+
+<h3>2. Modules</h3>
+<div class="tbl-wrap"><table class="tbl">
+<thead><tr><th>Module</th><th>Route</th><th>What it does</th><th>Who can use it</th></tr></thead>
+<tbody>
+<tr><td>Overview</td><td><code>/admin</code></td><td>Company dashboard for the chosen period, which defaults to the current financial year (April to March). Shows cash in and out, payables, outstanding from clients, project and task health, new enquiries and recent activity.</td><td>SA sees every tile. A sees tiles for the modules they can view.</td></tr>
+<tr><td>Clients</td><td><code>/admin/clients</code></td><td>Client directory with contacts, country, billing currency, GSTIN, account owner, source and status. The client page shows its projects, money received and outstanding, third-party and expense costs, and an activity feed. It includes the system client "ProDevly (internal)" for our own projects.</td><td>SA, A. Archive SA, G.</td></tr>
+<tr><td>Projects</td><td><code>/admin/projects</code></td><td>Projects per client with type, status, health, project lead and members, start date, deadline, contract value and currency, billing milestones, cost budget and links. Status changes keep a history with a note. The project page shows tasks, money, margin, team hours and activity.</td><td>SA, A. Money fields SA, G.</td></tr>
+<tr><td>Tasks and work logs</td><td><code>/admin/tasks</code>, <code>/admin/work-logs</code>, <code>/admin/my</code></td><td>Tasks per project with assignees (admins or third parties), priority, estimate, due date and status history, shown as a list and a board. Admins log time against tasks. My work is each person's own tasks, time and payouts.</td><td>SA, A. All work logs SA, G.</td></tr>
+<tr><td>Client payments</td><td><code>/admin/payments</code></td><td>Ledger of money received from clients. Each entry links to a client and project, optionally a milestone and a task, and stores currency, FX rate, INR amount, mode, transaction reference, invoice reference and TDS.</td><td>SA, G. Void SA.</td></tr>
+<tr><td>Third parties and payouts</td><td><code>/admin/third-parties</code></td><td>Freelancers, agencies and vendors we pay. Work orders record what we agreed to pay a third party for a client project or task. Payouts record what we owe and what we paid, each linked to client, project and task.</td><td>Directory SA, A. Work orders and payouts SA, G. Mark paid and void SA.</td></tr>
+<tr><td>Expenses</td><td><code>/admin/expenses</code></td><td>Our own spending. Each expense is a company overhead or is charged to a client project and optionally a task. Admins submit out-of-pocket expenses for reimbursement and superadmins approve and reimburse them.</td><td>Submit SA, A. All records SA, G. Approve SA.</td></tr>
+<tr><td>Team and roles</td><td><code>/admin/team</code></td><td>Team directory with job role, skills, weekly capacity, open tasks and hours. Pay profiles and payouts to team members, with each payout allocated to projects. Job-role catalogue.</td><td>Directory SA, A. Pay SA and the person themself.</td></tr>
+<tr><td>Admins</td><td><code>/admin/admins</code></td><td>Login accounts. Create admins and superadmins, set role and grants, reset passwords, sign a person out everywhere, remove and reactivate. Shows last sign-in, lockouts and pending password changes.</td><td>SA only.</td></tr>
+<tr><td>Website content</td><td><code>/admin/content</code></td><td>Content for the public site. Showcase projects, partners, services, pricing plans, developer profiles, company info and contact details. Each item is draft, published or archived. A home section renders only when it has at least one published item.</td><td>Edit SA, A. Publish SA, G.</td></tr>
+<tr><td>Enquiries</td><td><code>/admin/enquiries</code></td><td>Contact form submissions saved by <code>/api/leads</code>. Assign, set status, add notes, set a follow-up date, and convert an enquiry into a client with a draft project.</td><td>SA, A.</td></tr>
+<tr><td>Settings and FX</td><td><code>/admin/settings</code></td><td>Organisation details, financial-year start month, time zone, enabled currencies, FX rate table, payment modes, expense categories, third-party types, enquiry budget ranges and the work-log edit window.</td><td>SA. FX rates SA, G.</td></tr>
+<tr><td>Audit log</td><td><code>/admin/audit</code></td><td>Append-only record of every change and every sign-in event with actor, action, entity, before and after values, time and request id. Filters by person, action, entity, client and project.</td><td>SA all. A own.</td></tr>
+</tbody></table></div>
+
+<h3>3. Data model</h3>
+<h4>Conventions</h4>
+<ul>
+<li>One Mongoose 9 model per collection, typed through <code>declare module 'mongoose' { interface Models { ... } }</code> and exported as <code>models.X ?? model('X', schema)</code>. Every model is registered in <code>src/models/index.ts</code> so <code>populate()</code> and the index script see all of them.</li>
+<li>Every document has <code>createdAt</code> and <code>updatedAt</code> from <code>timestamps</code>, plus <code>createdBy</code> and <code>updatedBy</code> stored as an actor snapshot <code>{ id, name }</code>. History and audit views render without joins and keep the name after an account is removed.</li>
+<li>Archivable documents carry <code>archivedAt</code> and <code>archivedBy</code>. Default queries exclude archived records.</li>
+<li>Human references come from <code>Counter.nextSequence(key)</code>, for example <code>CL-0007</code>, <code>PRJ-0042</code>, <code>PRJ-0042-T007</code> and <code>PAY-FY27-0001</code>. Money references use a financial-year counter that starts again each April.</li>
+<li>Date-only business fields such as received date, due date and work date are stored as UTC midnight of the calendar date and are never shifted by time zone. Timestamps are real instants and are bucketed in <code>Asia/Kolkata</code>.</li>
+<li>Links are derived on the server. When an entry names a task, the service reads the task and sets <code>projectId</code> and <code>clientId</code> from it. When it names a project, the service sets <code>clientId</code>. A request whose ids disagree is rejected with <code>LINK_MISMATCH</code>. A task cannot move to another project, and a project cannot move to another client, once a work log or money entry references it.</li>
+<li>Every money entry embeds the shared <code>Money</code> subschema as <code>amount</code>.</li>
+</ul>
+<h4>The <code>Money</code> subschema</h4>
+<ul>
+<li><code>amountMinor</code> integer in the currency's minor unit, greater than 0</li>
+<li><code>currency</code> ISO 4217 code, uppercase, from the enabled list in Settings</li>
+<li><code>fxRate</code> INR per 1 unit of the currency, up to 6 decimals, exactly 1 for INR</li>
+<li><code>fxDate</code> the date the rate applies to</li>
+<li><code>fxSource</code> <code>'identity' | 'table' | 'bank' | 'manual'</code></li>
+<li><code>inrMinor</code> integer paise, computed on the server and never sent by the client</li>
+</ul>
+
+<p>The first diagram shows clients, delivery and money. Every money collection points to a client, a project and optionally a task.</p>
+<pre class="mermaid">
+erDiagram
+  CLIENT ||--o{ PROJECT : owns
+  PROJECT ||--o{ TASK : contains
+  TASK ||--o{ WORK_LOG : "time logged on"
+  ADMIN ||--o{ WORK_LOG : logs
+  ADMIN }o--o{ TASK : "assigned to"
+  THIRD_PARTY }o--o{ TASK : "assigned to"
+  TEAM_ROLE |o--o{ ADMIN : "job role of"
+  ADMIN ||--o| PAY_PROFILE : "paid under"
+  CLIENT ||--o{ CLIENT_PAYMENT : pays
+  PROJECT ||--o{ CLIENT_PAYMENT : "received for"
+  TASK |o--o{ CLIENT_PAYMENT : "optionally for"
+  THIRD_PARTY ||--o{ WORK_ORDER : "engaged by"
+  PROJECT ||--o{ WORK_ORDER : "scoped to"
+  TASK |o--o{ WORK_ORDER : "optionally for"
+  THIRD_PARTY ||--o{ THIRD_PARTY_PAYOUT : receives
+  WORK_ORDER |o--o{ THIRD_PARTY_PAYOUT : "settled by"
+  CLIENT ||--o{ THIRD_PARTY_PAYOUT : "cost of"
+  PROJECT ||--o{ THIRD_PARTY_PAYOUT : "cost of"
+  TASK |o--o{ THIRD_PARTY_PAYOUT : "cost of"
+  CLIENT |o--o{ EXPENSE : "cost of"
+  PROJECT |o--o{ EXPENSE : "cost of"
+  TASK |o--o{ EXPENSE : "cost of"
+  ADMIN |o--o{ EXPENSE : "paid out of pocket"
+  ADMIN ||--o{ TEAM_PAYOUT : receives
+  TEAM_PAYOUT ||--o{ PAYOUT_ALLOCATION : "split into"
+  PROJECT ||--o{ PAYOUT_ALLOCATION : "cost of"
+  CLIENT {
+    string ref UK "CL-0007"
+    string status
+    bool isInternal
+  }
+  PROJECT {
+    string ref UK "PRJ-0042"
+    ObjectId clientId FK
+    string status
+    Contract contract "amount and currency"
+  }
+  TASK {
+    string ref UK "PRJ-0042-T007"
+    ObjectId projectId FK
+    ObjectId clientId FK "derived"
+    string status
+  }
+  WORK_LOG {
+    ObjectId adminId FK
+    ObjectId taskId FK
+    ObjectId projectId FK "derived"
+    int minutes
+  }
+  CLIENT_PAYMENT {
+    ObjectId clientId FK "required"
+    ObjectId projectId FK "required"
+    ObjectId taskId FK "optional"
+    Money amount "currency, rate, INR"
+    string status "received or void"
+  }
+  WORK_ORDER {
+    ObjectId thirdPartyId FK
+    ObjectId clientId FK
+    ObjectId projectId FK
+    ObjectId taskId FK "optional"
+    Agreed agreed "amount and currency"
+  }
+  THIRD_PARTY_PAYOUT {
+    ObjectId thirdPartyId FK "required"
+    ObjectId clientId FK "required"
+    ObjectId projectId FK "required"
+    ObjectId taskId FK "optional"
+    ObjectId workOrderId FK "optional"
+    Money amount "currency, rate, INR"
+    string status "due, paid or void"
+  }
+  EXPENSE {
+    string scope "company or project"
+    ObjectId clientId FK "when scope is project"
+    ObjectId projectId FK "when scope is project"
+    ObjectId taskId FK "optional"
+    Money amount "currency, rate, INR"
+    string status
+  }
+  TEAM_PAYOUT {
+    ObjectId adminId FK
+    Money amount "currency, rate, INR"
+    string status "due, paid or void"
+  }
+  PAYOUT_ALLOCATION {
+    ObjectId clientId FK
+    ObjectId projectId FK
+    int inrMinor "embedded in team payout"
+  }
+</pre>
+
+<p>The second diagram shows accounts, enquiries, website content and system collections.</p>
+<pre class="mermaid">
+erDiagram
+  ADMIN ||--o{ AUDIT_LOG : "acts in"
+  ADMIN |o--o{ LEAD : "assigned"
+  LEAD |o--o| CLIENT : "converted to"
+  ADMIN |o--o| DEVELOPER_PROFILE : "shown publicly as"
+  PROJECT |o--o{ SHOWCASE_ITEM : "published as"
+  SERVICE }o--o{ SHOWCASE_ITEM : tags
+  MEDIA |o--o{ SHOWCASE_ITEM : "cover and gallery"
+  MEDIA |o--o{ PARTNER : logo
+  MEDIA |o--o{ DEVELOPER_PROFILE : photo
+  MEDIA }o--o{ EXPENSE : receipts
+  MEDIA }o--o{ CLIENT_PAYMENT : attachments
+  MEDIA }o--o{ THIRD_PARTY_PAYOUT : attachments
+  ADMIN {
+    string email UK
+    string role "superadmin or admin"
+    int tokenVersion
+  }
+  LEAD {
+    string ref UK "ENQ-0001"
+    string status
+  }
+  SHOWCASE_ITEM {
+    string slug UK
+    string status "draft, published, archived"
+  }
+  SERVICE {
+    string slug UK
+    string totemKey
+  }
+  PARTNER {
+    string name
+    string status
+  }
+  DEVELOPER_PROFILE {
+    ObjectId adminId FK "optional"
+    bool consentConfirmed
+  }
+  PRICING_PLAN {
+    string priceModel
+    int amountMinor "optional"
+  }
+  MEDIA {
+    ObjectId fileId "GridFS"
+    string visibility "public or private"
+  }
+  SITE_INFO {
+    string id PK "site"
+  }
+  SETTINGS {
+    string id PK "global"
+  }
+  FX_RATE {
+    string currency
+    date rateOn
+    float rate "INR per unit"
+  }
+  AUDIT_LOG {
+    string action
+    date at
+  }
+  COUNTER {
+    string id PK "sequence key"
+    int seq
+  }
+  RATE_LIMIT {
+    string id PK "bucket, key, window"
+    date expiresAt "TTL"
+  }
+</pre>
+
+<h4>Accounts and team</h4>
+<details><summary><code>admins</code> login accounts and team profiles</summary>
+<h4>Fields</h4>
+<ul>
+<li><code>name</code> string, required</li>
+<li><code>email</code> string, trimmed and lowercased, unique</li>
+<li><code>passwordHash</code> string, <code>select: false</code></li>
+<li><code>role</code> <code>'superadmin' | 'admin'</code></li>
+<li><code>grants</code> capability array, validated against <code>GRANTABLE</code></li>
+<li><code>status</code> <code>'active' | 'deactivated'</code></li>
+<li><code>mustChangePassword</code> boolean, true for seeded accounts, new accounts and after a reset</li>
+<li><code>tokenVersion</code> integer starting at 0</li>
+<li><code>failedLoginAttempts</code> integer, <code>lockedUntil</code> date</li>
+<li><code>lastLoginAt</code>, <code>lastLoginIpHash</code>, <code>passwordChangedAt</code> (the step-up window is not stored here: it is the <code>su</code> claim in the session cookie, so it belongs to one browser)</li>
+<li><code>profile</code> with <code>phone</code>, <code>jobRoleId</code> (ref <code>teamRoles</code>), <code>designation</code>, <code>skills</code>, <code>employmentType</code> (<code>'full_time' | 'part_time' | 'intern' | 'contract'</code>), <code>joinedOn</code>, <code>weeklyCapacityHours</code> (optional), <code>avatarMediaId</code></li>
+<li><code>deactivatedAt</code>, <code>deactivatedBy</code> actor, <code>deactivationReason</code></li>
+</ul>
+<h4>Indexes</h4>
+<ul><li><code>{ email: 1 }</code> unique</li><li><code>{ role: 1, status: 1 }</code></li><li><code>{ status: 1, name: 1 }</code></li></ul>
+</details>
+
+<details><summary><code>payProfiles</code> how each team member is paid</summary>
+<h4>Fields</h4>
+<ul>
+<li><code>adminId</code> ref <code>admins</code>, unique</li>
+<li><code>basis</code> <code>'monthly' | 'hourly' | 'per_task' | 'none'</code></li>
+<li><code>rateMinor</code> integer, <code>currency</code> ISO 4217</li>
+<li><code>effectiveFrom</code> date-only</li>
+<li><code>history</code> array of previous <code>{ basis, rateMinor, currency, effectiveFrom, effectiveTo, changedBy }</code></li>
+<li><code>payoutNote</code> bank or UPI note, <code>select: false</code>, returned to superadmins only</li>
+</ul>
+<p>Kept apart from <code>admins</code> so pay data never travels with session or directory reads. The person can read their own basis and rate.</p>
+<h4>Indexes</h4>
+<ul><li><code>{ adminId: 1 }</code> unique</li></ul>
+</details>
+
+<details><summary><code>teamRoles</code> job-role catalogue</summary>
+<h4>Fields</h4>
+<ul><li><code>name</code>, <code>nameLower</code>, <code>description</code>, <code>order</code>, <code>archivedAt</code></li></ul>
+<p>Examples the team may add are Frontend developer, Backend developer, UI/UX designer, Project manager, QA and DevOps. The seed adds none.</p>
+<h4>Indexes</h4>
+<ul><li><code>{ nameLower: 1 }</code> unique</li><li><code>{ order: 1 }</code></li></ul>
+</details>
+
+<h4>Clients and delivery</h4>
+<details><summary><code>clients</code></summary>
+<h4>Fields</h4>
+<ul>
+<li><code>ref</code> (<code>CL-0001</code>), <code>name</code>, <code>nameLower</code></li>
+<li><code>kind</code> <code>'company' | 'individual'</code></li>
+<li><code>status</code> <code>'prospect' | 'active' | 'paused' | 'past'</code></li>
+<li><code>isInternal</code> boolean. Exactly one internal client, "ProDevly (internal)", created by the seed and protected from archive</li>
+<li><code>industry</code>, <code>country</code> (ISO 3166-1 alpha-2), <code>billingCurrency</code> (ISO 4217)</li>
+<li><code>gstin</code> optional, validated as 15 characters, <code>taxId</code> optional for non-Indian clients</li>
+<li><code>address</code> <code>{ line1, line2, city, state, postalCode, country }</code>, <code>website</code></li>
+<li><code>contacts</code> array of <code>{ name, email, phone, designation, isPrimary }</code></li>
+<li><code>accountOwner</code> actor, <code>source</code> <code>'enquiry' | 'referral' | 'repeat' | 'direct' | 'other'</code>, <code>leadId</code></li>
+<li><code>notes</code>, <code>tags</code>, <code>archivedAt</code></li>
+</ul>
+<h4>Indexes</h4>
+<ul><li><code>{ ref: 1 }</code> unique</li><li><code>{ nameLower: 1 }</code></li><li><code>{ status: 1, updatedAt: -1 }</code></li><li><code>{ 'accountOwner.id': 1, status: 1 }</code></li><li><code>{ 'contacts.email': 1 }</code></li><li><code>{ isInternal: 1 }</code> unique, partial on <code>isInternal: true</code></li></ul>
+</details>
+
+<details><summary><code>projects</code></summary>
+<h4>Fields</h4>
+<ul>
+<li><code>ref</code> (<code>PRJ-0001</code>), <code>clientId</code>, <code>clientName</code> snapshot, <code>name</code></li>
+<li><code>type</code> <code>'website' | 'web_app' | 'saas' | 'mobile_app' | 'custom_software' | 'uiux' | 'devops' | 'maintenance'</code></li>
+<li><code>status</code> <code>'proposal' | 'active' | 'in_review' | 'on_hold' | 'delivered' | 'maintenance' | 'closed' | 'cancelled'</code></li>
+<li><code>health</code> <code>'on_track' | 'at_risk' | 'off_track'</code>, <code>priority</code></li>
+<li><code>lead</code> actor, <code>memberIds</code> array of admin ids</li>
+<li><code>startOn</code>, <code>deadlineOn</code>, <code>deliveredOn</code> date-only</li>
+<li><code>contract</code> <code>{ pricingModel: 'fixed' | 'milestone' | 'hourly' | 'retainer', amountMinor, currency, hourlyRateMinor, retainerMonthlyMinor }</code></li>
+<li><code>milestones</code> array of <code>{ _id, title, amountMinor, dueOn, status: 'pending' | 'invoiced' | 'paid', invoiceRef }</code> in the contract currency</li>
+<li><code>agreed</code> snapshot <code>{ scope, amountMinor, currency, deadlineOn, capturedAt, capturedBy }</code>, written once when the project first becomes active and never edited, so scope, price and deadline drift stays visible</li>
+<li><code>costBudgetInrMinor</code> optional internal cost budget</li>
+<li><code>scopeSummary</code>, <code>links</code> <code>{ repo, staging, live, design }</code>, <code>tags</code></li>
+<li><code>statusHistory</code> array of <code>{ from, to, at, by, note }</code></li>
+</ul>
+<h4>Status transitions</h4>
+<ul>
+<li><code>proposal</code> to <code>active</code> or <code>cancelled</code></li>
+<li><code>active</code> to <code>in_review</code>, <code>on_hold</code> or <code>cancelled</code></li>
+<li><code>in_review</code> to <code>active</code> or <code>delivered</code></li>
+<li><code>delivered</code> to <code>maintenance</code>, <code>closed</code> or back to <code>active</code></li>
+<li><code>maintenance</code> to <code>closed</code></li>
+<li><code>on_hold</code> to <code>active</code> or <code>cancelled</code></li>
+<li><code>closed</code> and <code>cancelled</code> reopen to <code>active</code> by a superadmin only</li>
+<li>Moving to <code>on_hold</code>, <code>cancelled</code> or reopening needs a note. Moving to <code>delivered</code> sets <code>deliveredOn</code>.</li>
+</ul>
+<h4>Indexes</h4>
+<ul><li><code>{ ref: 1 }</code> unique</li><li><code>{ clientId: 1, status: 1 }</code></li><li><code>{ status: 1, deadlineOn: 1 }</code></li><li><code>{ 'lead.id': 1, status: 1 }</code></li><li><code>{ memberIds: 1, status: 1 }</code></li><li><code>{ type: 1, status: 1 }</code></li></ul>
+</details>
+
+<details><summary><code>tasks</code></summary>
+<h4>Fields</h4>
+<ul>
+<li><code>ref</code> (<code>PRJ-0042-T007</code>, counter key <code>task:PRJ-0042</code>), <code>projectId</code>, <code>clientId</code> derived</li>
+<li><code>title</code>, <code>description</code> plain text</li>
+<li><code>status</code> <code>'backlog' | 'todo' | 'in_progress' | 'in_review' | 'blocked' | 'done' | 'cancelled'</code></li>
+<li><code>priority</code> <code>'low' | 'medium' | 'high' | 'urgent'</code></li>
+<li><code>assignees</code> array of <code>{ kind: 'admin' | 'thirdParty', id, name }</code></li>
+<li><code>estimateMinutes</code>, <code>dueOn</code>, <code>startedAt</code> (first move to <code>in_progress</code>), <code>completedAt</code></li>
+<li><code>order</code> board position, <code>labels</code></li>
+<li><code>loggedMinutes</code> cached sum, updated in the same transaction as each work-log write</li>
+<li><code>statusHistory</code> array of <code>{ from, to, at, by, note }</code>, <code>archivedAt</code></li>
+</ul>
+<h4>Indexes</h4>
+<ul><li><code>{ ref: 1 }</code> unique</li><li><code>{ projectId: 1, status: 1, order: 1 }</code></li><li><code>{ 'assignees.kind': 1, 'assignees.id': 1, status: 1 }</code></li><li><code>{ status: 1, dueOn: 1 }</code></li><li><code>{ clientId: 1, status: 1 }</code></li><li>text index on <code>title</code> and <code>description</code>, queried through <code>mongoose.trusted()</code></li></ul>
+</details>
+
+<details><summary><code>workLogs</code></summary>
+<h4>Fields</h4>
+<ul>
+<li><code>adminId</code>, <code>adminName</code> snapshot</li>
+<li><code>taskId</code>, <code>projectId</code> and <code>clientId</code> derived from the task</li>
+<li><code>workedOn</code> date-only, <code>minutes</code> integer from 5 to 720</li>
+<li><code>note</code> required, 3 to 500 characters</li>
+<li><code>billable</code> boolean, defaulting to true on hourly projects</li>
+<li><code>lockedByPayoutId</code> set when a paid team payout covers the log</li>
+</ul>
+<h4>Indexes</h4>
+<ul><li><code>{ adminId: 1, workedOn: -1 }</code></li><li><code>{ projectId: 1, workedOn: -1 }</code></li><li><code>{ taskId: 1, workedOn: -1 }</code></li><li><code>{ lockedByPayoutId: 1 }</code> partial</li></ul>
+</details>
+
+<h4>Money</h4>
+<details><summary><code>clientPayments</code> money received from clients</summary>
+<h4>Fields</h4>
+<ul>
+<li><code>ref</code> (<code>PAY-FY27-0001</code>), <code>type</code> <code>'receipt' | 'refund'</code></li>
+<li><code>clientId</code> required, <code>projectId</code> required, <code>taskId</code> optional, <code>milestoneId</code> optional</li>
+<li><code>amount</code> <code>Money</code>, the net amount that reached our account</li>
+<li><code>contractEquivalentMinor</code> the amount in the project's contract currency. It equals <code>amountMinor</code> when the currencies match. Otherwise the service computes it from the two INR rates on the received date and the user can correct it.</li>
+<li><code>tdsMinor</code> and <code>chargesMinor</code> optional, in the entry currency, for TDS deducted by the client and bank or platform fees</li>
+<li><code>receivedOn</code> date-only, <code>mode</code> from Settings, <code>transactionRef</code>, <code>invoiceRef</code>, <code>note</code>, <code>attachmentMediaIds</code></li>
+<li><code>status</code> <code>'received' | 'void'</code>, <code>voidReason</code>, <code>voidedBy</code>, <code>voidedAt</code></li>
+</ul>
+<h4>Indexes</h4>
+<ul><li><code>{ ref: 1 }</code> unique</li><li><code>{ projectId: 1, status: 1, receivedOn: -1 }</code></li><li><code>{ clientId: 1, status: 1, receivedOn: -1 }</code></li><li><code>{ status: 1, receivedOn: -1 }</code></li><li><code>{ taskId: 1 }</code> partial</li><li><code>{ 'amount.currency': 1, receivedOn: -1 }</code></li></ul>
+</details>
+
+<details><summary><code>thirdParties</code> freelancers, agencies and vendors</summary>
+<h4>Fields</h4>
+<ul>
+<li><code>ref</code> (<code>TP-0001</code>), <code>name</code>, <code>nameLower</code></li>
+<li><code>type</code> from Settings, defaulting to <code>freelancer</code>, <code>agency</code>, <code>vendor</code>, <code>contractor</code></li>
+<li><code>skills</code>, <code>contactName</code>, <code>email</code>, <code>phone</code>, <code>country</code>, <code>defaultCurrency</code>, <code>gstin</code> optional</li>
+<li><code>paymentNote</code> bank, UPI, PayPal or Wise details, <code>select: false</code>, needs <code>thirdParty:payDetails</code></li>
+<li><code>status</code> <code>'active' | 'inactive'</code>, <code>notes</code>, <code>archivedAt</code></li>
+</ul>
+<h4>Indexes</h4>
+<ul><li><code>{ ref: 1 }</code> unique</li><li><code>{ nameLower: 1 }</code></li><li><code>{ type: 1, status: 1 }</code></li></ul>
+</details>
+
+<details><summary><code>workOrders</code> what we agreed to pay a third party</summary>
+<h4>Fields</h4>
+<ul>
+<li><code>ref</code> (<code>WO-0001</code>), <code>thirdPartyId</code>, <code>thirdPartyName</code> snapshot</li>
+<li><code>clientId</code>, <code>projectId</code> required, <code>taskId</code> optional</li>
+<li><code>title</code>, <code>scope</code>, <code>agreed</code> <code>{ amountMinor, currency }</code>, <code>dueOn</code></li>
+<li><code>status</code> <code>'open' | 'delivered' | 'closed' | 'cancelled'</code>, <code>statusHistory</code></li>
+<li><code>paidMinor</code> and <code>dueMinor</code> cached sums of linked payouts, updated in the same transaction as each payout write</li>
+</ul>
+<h4>Indexes</h4>
+<ul><li><code>{ ref: 1 }</code> unique</li><li><code>{ thirdPartyId: 1, status: 1 }</code></li><li><code>{ projectId: 1, status: 1 }</code></li><li><code>{ taskId: 1 }</code> partial</li></ul>
+</details>
+
+<details><summary><code>thirdPartyPayouts</code> what we owe and paid third parties</summary>
+<h4>Fields</h4>
+<ul>
+<li><code>ref</code> (<code>TPP-FY27-0001</code>), <code>thirdPartyId</code>, <code>thirdPartyName</code> snapshot, <code>workOrderId</code> optional</li>
+<li><code>clientId</code> required, <code>projectId</code> required, <code>taskId</code> optional. With a work order, all three are copied from it.</li>
+<li><code>amount</code> <code>Money</code>. With a work order, the currency must match the work order currency or the API answers <code>CURRENCY_MISMATCH</code>.</li>
+<li><code>tdsMinor</code> optional TDS we withheld</li>
+<li><code>status</code> <code>'due' | 'paid' | 'void'</code>, <code>dueOn</code>, <code>paidOn</code></li>
+<li><code>mode</code>, <code>transactionRef</code>, <code>note</code>, <code>attachmentMediaIds</code></li>
+<li><code>recordedBy</code>, <code>paidBy</code>, <code>voidReason</code>, <code>voidedBy</code></li>
+</ul>
+<h4>Indexes</h4>
+<ul><li><code>{ ref: 1 }</code> unique</li><li><code>{ thirdPartyId: 1, status: 1, paidOn: -1 }</code></li><li><code>{ projectId: 1, status: 1 }</code></li><li><code>{ clientId: 1, status: 1 }</code></li><li><code>{ workOrderId: 1 }</code> partial</li><li><code>{ taskId: 1 }</code> partial</li><li><code>{ status: 1, dueOn: 1 }</code></li></ul>
+</details>
+
+<details><summary><code>expenses</code> our own spending</summary>
+<h4>Fields</h4>
+<ul>
+<li><code>ref</code> (<code>EXP-FY27-0001</code>), <code>scope</code> <code>'company' | 'project'</code></li>
+<li><code>clientId</code> and <code>projectId</code> required when scope is project, <code>taskId</code> optional</li>
+<li><code>category</code> from Settings, defaulting to software and subscriptions, hosting and domains, hardware, travel, office, marketing, fees and taxes, other</li>
+<li><code>description</code>, <code>payee</code>, <code>amount</code> <code>Money</code>, <code>spentOn</code> date-only</li>
+<li><code>paidFrom</code> <code>'company' | 'admin'</code>, <code>paidByAdmin</code> actor when an admin paid out of pocket</li>
+<li><code>status</code> <code>'submitted' | 'approved' | 'paid' | 'rejected' | 'void'</code></li>
+<li><code>approvedBy</code>, <code>approvedAt</code>, <code>paidOn</code> (company payment date or reimbursement date), <code>mode</code>, <code>transactionRef</code></li>
+<li><code>receiptMediaIds</code>, <code>rejectReason</code>, <code>voidReason</code></li>
+</ul>
+<h4>Flow</h4>
+<ul>
+<li>Company-paid expenses are recorded directly as <code>paid</code> by a superadmin or an admin with <code>expense:record</code>.</li>
+<li>Out-of-pocket expenses start as <code>submitted</code> by the admin. A superadmin approves them, which means we owe the admin, and later marks them <code>paid</code> with the reimbursement date. Reimbursements are never recorded as team payouts, so nothing is counted twice.</li>
+</ul>
+<h4>Indexes</h4>
+<ul><li><code>{ ref: 1 }</code> unique</li><li><code>{ projectId: 1, status: 1, spentOn: -1 }</code></li><li><code>{ scope: 1, status: 1, spentOn: -1 }</code></li><li><code>{ category: 1, spentOn: -1 }</code></li><li><code>{ 'paidByAdmin.id': 1, status: 1 }</code></li><li><code>{ status: 1, spentOn: -1 }</code></li></ul>
+</details>
+
+<details><summary><code>teamPayouts</code> payments to team members</summary>
+<h4>Fields</h4>
+<ul>
+<li><code>ref</code> (<code>TMP-FY27-0001</code>), <code>adminId</code>, <code>adminName</code> snapshot</li>
+<li><code>basis</code> <code>'salary' | 'hours' | 'tasks' | 'bonus' | 'other'</code></li>
+<li><code>periodFrom</code>, <code>periodTo</code> date-only</li>
+<li><code>suggestion</code> snapshot <code>{ minutes, taskCount, rateMinor, currency, computedMinor }</code> of what the system proposed</li>
+<li><code>amount</code> <code>Money</code>, <code>status</code> <code>'due' | 'paid' | 'void'</code>, <code>dueOn</code>, <code>paidOn</code></li>
+<li><code>mode</code>, <code>transactionRef</code>, <code>note</code>, <code>recordedBy</code>, <code>paidBy</code>, <code>voidReason</code></li>
+<li><code>allocations</code> embedded array of <code>{ clientId, projectId, amountMinor, inrMinor, minutes }</code>. The sum cannot exceed the payout amount.</li>
+<li><code>unallocatedInrMinor</code> the remainder, treated as company overhead</li>
+</ul>
+<h4>Indexes</h4>
+<ul><li><code>{ ref: 1 }</code> unique</li><li><code>{ adminId: 1, status: 1, paidOn: -1 }</code></li><li><code>{ 'allocations.projectId': 1, status: 1 }</code></li><li><code>{ status: 1, dueOn: 1 }</code></li></ul>
+</details>
+
+<details><summary><code>fxRates</code> conversion rates to INR</summary>
+<h4>Fields</h4>
+<ul><li><code>currency</code>, <code>rateOn</code> date-only, <code>rate</code> INR per 1 unit, <code>source</code> <code>'manual' | 'ecb'</code>, <code>enteredBy</code></li></ul>
+<h4>Indexes</h4>
+<ul><li><code>{ currency: 1, rateOn: -1 }</code> unique</li></ul>
+</details>
+
+<h4>Enquiries</h4>
+<details><summary><code>leads</code> contact form submissions, shown as Enquiries</summary>
+<h4>Fields</h4>
+<ul>
+<li><code>ref</code> (<code>ENQ-0001</code>), <code>name</code>, <code>email</code> lowercased, <code>phone</code>, <code>company</code>, <code>country</code></li>
+<li><code>services</code> chosen from published services, <code>budgetRange</code> from Settings, <code>message</code></li>
+<li><code>sourcePath</code>, <code>utm</code> <code>{ source, medium, campaign }</code>, <code>ipHash</code>, <code>userAgent</code></li>
+<li><code>status</code> <code>'new' | 'contacted' | 'qualified' | 'proposal_sent' | 'won' | 'lost' | 'spam'</code>, <code>statusHistory</code></li>
+<li><code>assignedTo</code> actor, <code>followUpOn</code>, <code>notes</code> array of <code>{ at, by, text }</code>, <code>firstResponseAt</code></li>
+<li><code>convertedClientId</code>, <code>convertedProjectId</code></li>
+<li><code>messageHash</code> SHA-256 of the normalised email and message, used for the 10-minute duplicate check</li>
+</ul>
+<h4>Indexes</h4>
+<ul><li><code>{ ref: 1 }</code> unique</li><li><code>{ status: 1, createdAt: -1 }</code></li><li><code>{ 'assignedTo.id': 1, status: 1 }</code></li><li><code>{ email: 1, createdAt: -1 }</code></li><li><code>{ messageHash: 1, createdAt: -1 }</code></li><li><code>{ followUpOn: 1, status: 1 }</code></li></ul>
+</details>
+
+<h4>Website content</h4>
+<p>All content collections share <code>status</code> (<code>'draft' | 'published' | 'archived'</code>), <code>order</code>, <code>publishedAt</code> and <code>publishedBy</code>, with the index <code>{ status: 1, order: 1 }</code>. Public reads select only published items.</p>
+<details><summary><code>showcaseItems</code> the public Our projects section</summary>
+<ul>
+<li><code>title</code>, <code>slug</code> unique, <code>clientDisplayName</code> optional, <code>projectId</code> optional internal link that is never rendered</li>
+<li><code>summary</code>, <code>body</code> with plain-text sections for the brief, what we built and the result</li>
+<li><code>serviceIds</code>, <code>stack</code>, <code>coverMediaId</code>, <code>galleryMediaIds</code>, <code>liveUrl</code></li>
+<li><code>completedOn</code> optional and rendered only when set</li>
+<li><code>clientApproved</code> boolean, which must be true before the item can be published</li>
+</ul>
+</details>
+<details><summary><code>partners</code></summary>
+<ul><li><code>name</code>, <code>kind</code> <code>'technology' | 'agency' | 'client'</code>, <code>logoMediaId</code>, <code>url</code>, <code>permissionConfirmed</code> which must be true before publishing</li></ul>
+</details>
+<details><summary><code>services</code></summary>
+<ul><li><code>title</code>, <code>slug</code> unique, <code>summary</code>, <code>deliverables</code>, <code>stack</code>, <code>totemKey</code> naming the 3D totem that represents the service on the home page (enum from the front-end totem set)</li></ul>
+</details>
+<details><summary><code>pricingPlans</code></summary>
+<ul>
+<li><code>name</code>, <code>summary</code>, <code>priceModel</code> <code>'fixed_from' | 'per_month' | 'per_hour' | 'quote'</code></li>
+<li><code>amountMinor</code> and <code>currency</code>, required unless the model is <code>quote</code>. A quote plan renders with no number.</li>
+<li><code>priceNote</code>, <code>features</code>, <code>highlighted</code> (at most one published plan), <code>ctaLabel</code></li>
+</ul>
+</details>
+<details><summary><code>developerProfiles</code> the public Our developers section</summary>
+<ul>
+<li><code>adminId</code> optional, unique when set, <code>displayName</code>, <code>title</code>, <code>photoMediaId</code></li>
+<li><code>bio</code> up to 280 characters, <code>skills</code>, <code>links</code> <code>{ github, linkedin, website }</code></li>
+<li><code>consentConfirmed</code> which must be true before publishing</li>
+</ul>
+<p>Public profiles are separate records so no internal field from <code>admins</code> can reach the public site.</p>
+</details>
+<details><summary><code>siteInfo</code> singleton <code>_id: 'site'</code></summary>
+<ul><li><code>legalName</code>, <code>displayName</code> (ProDevly), <code>email</code>, <code>phone</code>, <code>whatsapp</code>, <code>address</code>, <code>social</code> <code>{ linkedin, github, x, instagram, dribbble, behance }</code>, <code>footerNote</code>. The footer and the contact fallback read from here, and empty fields are not rendered.</li></ul>
+</details>
+<details><summary><code>media</code> uploaded files</summary>
+<ul>
+<li><code>storage</code> <code>'gridfs'</code>, <code>fileId</code> in the GridFS bucket <code>media</code>, <code>filename</code>, <code>mime</code>, <code>size</code>, <code>width</code>, <code>height</code>, <code>sha256</code></li>
+<li><code>visibility</code> <code>'public' | 'private'</code>, <code>alt</code>, <code>uploadedBy</code></li>
+<li>Images up to 5 MB (PNG, JPEG, WebP, AVIF, and SVG for logos after server-side sanitising). Receipts up to 10 MB (PDF, PNG, JPEG). Type is checked from the file bytes. A file can be deleted only when no document references it.</li>
+<li>Storage sits behind a small adapter so it can move to S3, R2 or Vercel Blob later without schema changes.</li>
+</ul>
+<h4>Indexes</h4>
+<ul><li><code>{ sha256: 1 }</code></li><li><code>{ visibility: 1, createdAt: -1 }</code></li></ul>
+</details>
+
+<h4>System</h4>
+<details><summary><code>settings</code> singleton <code>_id: 'global'</code></summary>
+<ul>
+<li><code>orgName</code> (ProDevly), <code>timezone</code> (<code>Asia/Kolkata</code>), <code>fyStartMonth</code> (4), <code>baseCurrency</code> fixed at INR</li>
+<li><code>enabledCurrencies</code> (default INR, USD, EUR, GBP, AED, AUD, CAD, SGD), <code>paymentModes</code> (bank transfer, UPI, cash, cheque, card, PayPal, Wise, Payoneer, other)</li>
+<li><code>expenseCategories</code>, <code>thirdPartyTypes</code>, <code>budgetRanges</code> for the contact form</li>
+<li><code>workLogEditWindowDays</code> (7), <code>fxStaleDays</code> (7), <code>leadDefaultAssignee</code> optional actor</li>
+</ul>
+</details>
+<details><summary><code>auditLogs</code> append-only activity</summary>
+<h4>Fields</h4>
+<ul>
+<li><code>at</code>, <code>actor</code> <code>{ id, name, role }</code> with a null id for the system and the seed script</li>
+<li><code>action</code> as <code>entity.verb</code>, for example <code>payment.void</code>, <code>admin.deactivate</code>, <code>auth.login_failed</code></li>
+<li><code>entity</code> <code>{ type, id, ref, label }</code>, <code>summary</code></li>
+<li><code>changes</code> array of <code>{ path, before, after }</code>, with password hashes, payment notes and tokens redacted</li>
+<li><code>context</code> <code>{ clientId, projectId, taskId }</code> so a project's full history can be filtered</li>
+<li><code>ipHash</code>, <code>userAgent</code>, <code>requestId</code></li>
+</ul>
+<p>There is no update or delete code path and no TTL. The single <code>audit()</code> helper is called inside the same transaction as the change it records.</p>
+<h4>Indexes</h4>
+<ul><li><code>{ at: -1 }</code></li><li><code>{ 'actor.id': 1, at: -1 }</code></li><li><code>{ 'entity.type': 1, 'entity.id': 1, at: -1 }</code></li><li><code>{ action: 1, at: -1 }</code></li><li><code>{ 'context.projectId': 1, at: -1 }</code></li><li><code>{ 'context.clientId': 1, at: -1 }</code></li></ul>
+</details>
+<details><summary><code>counters</code> and <code>rateLimits</code></summary>
+<ul>
+<li><code>counters</code> has <code>_id</code> as the key (<code>client</code>, <code>project</code>, <code>task:PRJ-0042</code>, <code>payment:FY27</code>, <code>superadmin-guard</code>) and <code>seq</code>. <code>nextSequence</code> uses <code>findOneAndUpdate</code> with <code>$inc</code>, <code>upsert: true</code> and <code>returnDocument: 'after'</code>.</li>
+<li><code>rateLimits</code> has <code>_id</code> as <code>bucket:keyHash:windowStart</code>, <code>count</code> and <code>expiresAt</code>, with a TTL index <code>{ expiresAt: 1 }</code> and <code>expireAfterSeconds: 0</code>.</li>
+</ul>
+</details>
+
+<h3>4. Money</h3>
+<ol>
+<li>Currency codes are ISO 4217 three-letter codes in uppercase. <code>src/config/currencies.ts</code> lists each code with its minor-unit digits, for example INR 2, USD 2, EUR 2, GBP 2, AED 2, JPY 0 and KWD 3. Superadmins choose the enabled set in Settings. INR is the base currency and cannot be disabled.</li>
+<li>Amounts are stored as integers in minor units. A user types 1,250.50 and the form sends 125050. Amounts are never stored as floats.</li>
+<li>Each entry captures the rate for its own date. On create, the service looks up the latest <code>fxRates</code> row for that currency on or before the entry date. If that row is older than <code>fxStaleDays</code>, the form asks for a rate and the API answers <code>FX_RATE_MISSING</code> until one is given. The user can override the rate with the one the bank applied, or type the INR amount that arrived and let the service derive the rate (<code>fxSource: 'bank'</code>). INR entries use rate 1.</li>
+<li>The INR value is computed once on the server as <code>inrMinor = round(amountMinor × fxRate × 10^(2 − digits(currency)))</code>. For example, USD 1,000.00 at 83.42 is stored as 8,342,000 paise, which is INR 83,420.00.</li>
+<li>Saved entries do not change when the FX table changes. Editing the amount, currency or date recomputes rate and INR unless the rate came from the bank or was typed by hand. Every edit is in the audit log.</li>
+<li>Third-party and team payouts recorded as <code>due</code> capture the rate again on the day they are marked paid, because that is when INR left the account.</li>
+<li>Dashboards sum <code>amount.inrMinor</code> and nothing else. Native amounts appear only grouped by currency as a secondary line, for example "USD 4,000.00 (INR 3,33,680.00)". INR uses <code>en-IN</code> grouping.</li>
+<li>Voided entries and rejected expenses are excluded from every total and stay visible with a Void or Rejected tag. Refunds to clients are client payments of type <code>refund</code> and are subtracted from received.</li>
+<li>Period filters use the settlement date, which is <code>receivedOn</code>, <code>paidOn</code> or <code>spentOn</code>. Open items use <code>dueOn</code>. The financial year runs from 1 April to 31 March.</li>
+<li>There is no payment gateway. Entries record money that moved by bank transfer, UPI, PayPal, Wise, cash and similar modes.</li>
+</ol>
+
+<h4>Which statuses count</h4>
+<div class="tbl-wrap"><table class="tbl">
+<thead><tr><th>Collection</th><th>Counted as settled</th><th>Counted as open</th><th>Date used</th></tr></thead>
+<tbody>
+<tr><td><code>clientPayments</code></td><td><code>received</code>, with refunds subtracted</td><td>Outstanding is computed from contracts and milestones</td><td><code>receivedOn</code></td></tr>
+<tr><td><code>thirdPartyPayouts</code></td><td><code>paid</code></td><td><code>due</code> plus open work-order balances</td><td><code>paidOn</code>, or <code>dueOn</code> when open</td></tr>
+<tr><td><code>expenses</code></td><td><code>approved</code> and <code>paid</code>, because the money is already spent</td><td><code>approved</code> with <code>paidFrom: 'admin'</code> is a reimbursement we owe</td><td><code>spentOn</code></td></tr>
+<tr><td><code>teamPayouts</code></td><td><code>paid</code></td><td><code>due</code></td><td><code>paidOn</code>, or <code>dueOn</code> when open</td></tr>
+</tbody></table></div>
+
+<h4>Outstanding from clients</h4>
+<ul>
+<li>Billable total per project is the contract amount for fixed and milestone projects. For hourly and retainer projects it is the sum of milestones marked invoiced or paid, so the team adds one milestone per invoice.</li>
+<li>Received toward the contract is the sum of <code>contractEquivalentMinor</code> over received payments, minus refunds.</li>
+<li>Outstanding equals billable total minus received toward the contract, in the contract currency. The Overview converts each project's outstanding to INR at the latest table rate and labels the tile "at latest rates".</li>
+<li>A new payment in the contract currency that would push received above the billable total is refused with <code>PAYMENT_EXCEEDS_DUE</code>, unless a superadmin ticks "Record as advance". Payments in another currency show a warning and are not blocked.</li>
+</ul>
+
+<h4>Project margin in INR</h4>
+<ul>
+<li><strong>Received</strong> is the sum of <code>inrMinor</code> over received client payments for the project, minus refunds.</li>
+<li><strong>Third-party cost</strong> is the sum over paid third-party payouts for the project.</li>
+<li><strong>Expense cost</strong> is the sum over approved and paid expenses charged to the project.</li>
+<li><strong>Team cost</strong> is the sum of <code>allocations.inrMinor</code> over paid team payouts where <code>allocations.projectId</code> is the project.</li>
+<li><strong>Margin</strong> is Received minus Third-party cost minus Expense cost minus Team cost. Margin percent is Margin divided by Received and is shown only when Received is above zero.</li>
+<li><strong>Projected margin</strong> is the billable total in INR at the latest rate minus committed costs. Committed costs add due payouts, open work-order balances (agreed minus paid minus due, at the latest rate) and due team allocations to the settled costs.</li>
+</ul>
+<h4>Team cost allocation</h4>
+<p>When a superadmin records a team payout, the form proposes allocations in proportion to the person's logged minutes per project in the payout period. The superadmin can edit the split. Allocations cannot exceed the payout amount and the remainder is company overhead. Company totals use the payout amount, and project margins use the allocations, so nothing is counted twice.</p>
+<h4>Internal and company figures</h4>
+<ul>
+<li>Projects under "ProDevly (internal)" never count as revenue. Their costs count in company totals and show as an Internal row in project tables.</li>
+<li>Company net for a period is external received minus paid third-party payouts minus approved and paid expenses (company and project scope) minus paid team payouts.</li>
+<li>Money dashboards share one pipeline builder, <code>ledgerUnionPipeline()</code> in <code>src/services/dashboards/ledger.ts</code>. It starts from <code>clientPayments</code> and uses <code>$unionWith</code> to bring in the other three money collections, each projected to <code>{ kind, status, date, clientId, projectId, taskId, inrMinor }</code>. Team payouts are unwound by allocation for project views and kept whole for company views. A single <code>$facet</code> then produces every tile and chart for the screen.</li>
+</ul>
+
+<h3>5. Dashboards</h3>
+<ul>
+<li>Every section page opens with its dashboard band (KPI tiles and two to four charts) above the records table. Both read the same URL filters for period, client, project and status, so one filter narrows tiles and table together.</li>
+<li>The default period is the current financial year. Presets are this month, last month, this quarter, this financial year, last financial year and a custom range.</li>
+<li>Each dashboard is one service function, <code>get&lt;Section&gt;Dashboard(range, viewer)</code>, running one aggregation with <code>$facet</code> and returning typed results. Missing groups render as 0. An empty dataset shows "No records yet" with a link to add the first record.</li>
+<li>Money tiles render only for viewers with the matching view capability. They are left out for other viewers, never shown as zero.</li>
+<li>Charts use recharts 3 with animation off. Every chart has a "Show as table" switch for keyboard and screen-reader users. Ratios render only when the denominator is above zero.</li>
+</ul>
+<div class="tbl-wrap"><table class="tbl">
+<thead><tr><th>Section</th><th>KPI tiles</th><th>Charts and lists</th></tr></thead>
+<tbody>
+<tr><td>Overview</td><td>Received from clients, paid to third parties, expenses, team payouts, company net, outstanding from clients at latest rates, payables (due payouts plus owed reimbursements), active projects, overdue projects, open tasks, overdue tasks, new enquiries, enquiries waiting for a first reply</td><td>Monthly cash in against cash out stacked by third parties, expenses and team, with a net line, across the financial year. Top 5 projects by margin. Projects by status. Latest 15 audit entries.</td></tr>
+<tr><td>Clients</td><td>Clients by status, new clients in the period, clients with received money in the period, outstanding total, share of period receipts from the top 3 clients</td><td>Received by client, top 10. Outstanding by client, top 10. Clients by country, top 8 plus other. List of clients with overdue milestones.</td></tr>
+<tr><td>Projects</td><td>Projects by status, at risk and off track counts, overdue (deadline passed and not delivered), delivered in the period, average delivery slip in days (delivered date minus deadline), total margin and margin percent</td><td>Projects started against delivered per month. Projects by type. Margin table per project with received, third-party, expense, team, margin and margin percent. Cost budget used percent for projects with a cost budget.</td></tr>
+<tr><td>Tasks and work logs</td><td>Open tasks by status, overdue, unassigned, blocked, completed in the period, median cycle time (first in progress to done), hours logged, billable share of hours</td><td>Tasks completed per week for 12 weeks. Open tasks per assignee stacked by status. Hours per person per week. Hours by project. Estimate against logged minutes for tasks done in the period.</td></tr>
+<tr><td>Client payments</td><td>Received in the period, number of receipts, refunds, TDS deducted, milestones due in the next 30 days, overdue milestones</td><td>Received per month. Received by currency with native totals and INR. Received by mode. Outstanding by project. Upcoming milestones list.</td></tr>
+<tr><td>Third parties and payouts</td><td>Active third parties, paid in the period, due now, open work orders, open work-order balance</td><td>Payouts per month. Paid by third party, top 10. Paid by project, top 10. Paid by third-party type. Open work orders with agreed, paid and balance.</td></tr>
+<tr><td>Expenses</td><td>Spent in the period (approved and paid), company against project split, awaiting approval (count and amount), reimbursements owed to admins</td><td>Spend per month stacked by the top 5 categories plus other. Spend by category. Spend by project, top 10. Reimbursements owed per admin.</td></tr>
+<tr><td>Team and roles</td><td>Active team members, members by job role, hours logged in the period, team payouts paid in the period, team payouts due, utilisation percent for members with a weekly capacity set</td><td>Hours by person. Open tasks by person. Payouts paid by person. Payouts per month.</td></tr>
+<tr><td>Admins</td><td>Active and deactivated accounts, superadmin count, accounts waiting for a first password change, currently locked accounts, failed sign-ins in the last 7 days</td><td>Last sign-in per account. Sign-in failures per day for 30 days. Recent admin-management actions from the audit log.</td></tr>
+<tr><td>Website content</td><td>Published, draft and archived counts per content type, home sections currently hidden because they have no published item</td><td>Last published item per type. Drafts missing required media or a required permission tick.</td></tr>
+<tr><td>Enquiries</td><td>New in the period, open by status, median first reply time (created to first status change away from new), conversion rate (won divided by won plus lost), follow-ups due today or earlier</td><td>Enquiries per week. Status funnel. Enquiries by service interest. By budget range. By source path and UTM source.</td></tr>
+<tr><td>Settings and FX</td><td>Latest rate and its date per enabled currency, currencies with a stale rate, entries in the period that used a manual or bank rate</td><td>Rate history line per currency for the selected period.</td></tr>
+<tr><td>Audit log</td><td>Actions in the period, sensitive actions (admin management, voids, failed sign-ins)</td><td>Actions per day for 30 days. Actions by person. Actions by entity type.</td></tr>
+</tbody></table></div>
+
+<h3>6. Work tracking for admins</h3>
+<div class="cols">
+<div>
+<h4>Assignments</h4>
+<ul>
+<li>A task has any number of assignees. Each one is an admin or a third party, stored as <code>{ kind, id, name }</code>.</li>
+<li>Assigning or unassigning writes an audit entry with the task, project and client in <code>context</code>.</li>
+<li>My work shows tasks newly assigned since the person's last visit with a count badge in the sidebar. There are no email notifications in the first release.</li>
+<li>Removing an admin lists their open tasks for reassignment in the same dialog.</li>
+</ul>
+<h4>Work logs</h4>
+<ul>
+<li>Logged from the task page or the quick-log form on My work with date, duration in hours and minutes, a note and a billable flag.</li>
+<li>Each entry is 5 to 720 minutes. A person's total for one day cannot pass 16 hours, and the form warns above 12 hours.</li>
+<li>Logs cannot be added to cancelled tasks or archived projects.</li>
+<li>Admins can edit or delete their own logs for <code>workLogEditWindowDays</code> (7). After that only a superadmin can change them. A log covered by a paid team payout is locked for everyone, and the API answers <code>ENTRY_LOCKED</code>.</li>
+</ul>
+</div>
+<div>
+<h4>Status history</h4>
+<ul>
+<li>Every task and project status change pushes <code>{ from, to, at, by, note }</code> onto <code>statusHistory</code>.</li>
+<li>Cycle time is measured from the first move to <code>in_progress</code> to <code>done</code>. On-time means <code>completedAt</code> is on or before <code>dueOn</code>.</li>
+<li>Reopening a done or cancelled task needs a note.</li>
+</ul>
+<h4>Payouts to admins</h4>
+<ul>
+<li>A superadmin records a team payout for a person and a period. The form proposes an amount from the pay profile. Monthly uses the rate. Hourly uses logged minutes in the period times the rate. Per task uses tasks the person completed in the period times the rate.</li>
+<li>The proposal is stored as <code>suggestion</code> next to the final amount, so differences stay visible.</li>
+<li>Allocations to projects are proposed from logged minutes per project and can be edited.</li>
+<li>Marking a payout paid locks the work logs in its period and captures the FX rate for the paid date.</li>
+</ul>
+</div>
+</div>
+<h4>Per-admin dashboard</h4>
+<p>It lives at <code>/admin/team/[adminId]</code>, and the same component renders on <code>/admin/my</code> for the signed-in person. Admins see only their own. Superadmins see anyone's.</p>
+<ul>
+<li>Hours this week, this month and in the selected period. Hours per week for 12 weeks. Hours by project.</li>
+<li>Open tasks, overdue tasks, tasks completed in the period, on-time completion percent, median cycle time.</li>
+<li>Payouts paid in the period in INR with native amounts, payouts due, reimbursements waiting.</li>
+<li>Last sign-in and the person's latest 20 audit entries.</li>
+</ul>
+
+<h3>7. Auth and security</h3>
+<div class="cols">
+<div>
+<h4>Sessions</h4>
+<ul>
+<li>A jose HS256 JWT signed with <code>AUTH_SECRET</code>, issuer <code>prodevly</code>, audience <code>prodevly-admin</code>, with claims <code>sub</code>, <code>role</code>, <code>tv</code> (token version), <code>iat</code>, <code>exp</code> and <code>auth_time</code>.</li>
+<li>The cookie is <code>__Host-pdv_session</code> in production and <code>pdv_session</code> on localhost. It is httpOnly, Secure in production, SameSite Lax, Path / and has no Domain.</li>
+<li>Sessions last 8 hours and slide. The cookie is reissued when less than half the time is left, with a hard limit of 12 hours after <code>auth_time</code>.</li>
+<li><code>tokenVersion</code> increments on password change, password reset, role change, deactivation and "Sign out everywhere". Changing your own password reissues the cookie for the current browser.</li>
+</ul>
+<h4>Sign-in</h4>
+<ul>
+<li>bcryptjs with cost 12. Passwords are 12 characters to 72 bytes (the bcrypt limit), cannot contain the email name or the person's first name, and are checked against a bundled list of common passwords.</li>
+<li>Two rate-limit buckets, 10 attempts per 15 minutes per IP and 5 per 15 minutes per email. Both fail closed.</li>
+<li>Five failures in a row lock the account for 15 minutes. The counter uses <code>findOneAndUpdate</code> with <code>$inc</code> and <code>returnDocument: 'after'</code>, and <code>lockedUntil</code> is set from the returned value.</li>
+<li>Unknown email, wrong password, locked and deactivated accounts get the same message and similar timing through <code>fakeVerify()</code>.</li>
+<li>When <code>mustChangePassword</code> is set, every page redirects to <code>/admin/account/password</code> and every API call except password change and logout answers <code>PASSWORD_CHANGE_REQUIRED</code>.</li>
+</ul>
+<h4>Authorisation layers</h4>
+<ul>
+<li><code>src/proxy.ts</code> matches <code>/admin/:path*</code>, skips <code>/admin/login</code> and <code>/admin/auth/*</code>, and verifies the JWT signature and expiry with jose before letting a request through. It never touches the database and never redirects away from the login page.</li>
+<li><code>getCurrentAdmin()</code>, wrapped in React <code>cache()</code>, verifies the token and loads the admin to confirm <code>status: 'active'</code> and a matching <code>tokenVersion</code>.</li>
+<li><code>requireAdminPage(cap)</code> runs in the workspace layout and again in every page, because layouts do not re-run on client navigation. <code>requireCapability(cap)</code> runs in every route handler. Services also receive the viewer and enforce own-record rules.</li>
+<li>An invalid session is sent to <code>/admin/auth/clear</code>, which deletes the cookie and redirects once to the login page. That removes the redirect loop seen in tour-travel-3d.</li>
+<li>The login page redirects to <code>/admin</code> only when <code>getCurrentAdmin()</code> succeeds. <code>safeNextPath()</code> blocks open redirects.</li>
+</ul>
+</div>
+<div>
+<h4>Request safety</h4>
+<ul>
+<li>Every mutation goes through <code>withRoute</code>, which applies <code>assertSameOrigin</code> (Sec-Fetch-Site must be same-origin, with an Origin host check as fallback), JSON content type, a 64 KB body limit, zod parsing and the <code>adminMutation</code> rate limit of 120 per minute per admin, which fails closed.</li>
+<li>Responses use one envelope, <code>{ ok: true, data }</code> or <code>{ ok: false, error: { code, message, fields } }</code>.</li>
+<li>Error codes include <code>UNAUTHORIZED</code>, <code>FORBIDDEN</code>, <code>NOT_FOUND</code>, <code>VALIDATION_FAILED</code>, <code>CONFLICT</code>, <code>RATE_LIMITED</code>, <code>PASSWORD_CHANGE_REQUIRED</code>, <code>STEP_UP_REQUIRED</code>, <code>SELF_ACTION</code>, <code>LAST_SUPERADMIN</code>, <code>LINK_MISMATCH</code>, <code>CURRENCY_MISMATCH</code>, <code>FX_RATE_MISSING</code>, <code>PAYMENT_EXCEEDS_DUE</code>, <code>ENTRY_LOCKED</code> and <code>HAS_LINKED_RECORDS</code>.</li>
+<li>Mongoose runs with <code>sanitizeFilter</code> and <code>strictQuery</code> on. Every operator we write is wrapped in <code>mongoose.trusted()</code>, and filters are built only from zod-parsed values. <code>audit:filters</code> enforces this in CI.</li>
+<li>Client IP comes from <code>getClientIp()</code>, which prefers <code>x-vercel-forwarded-for</code> and otherwise takes the rightmost <code>X-Forwarded-For</code> hop minus <code>TRUSTED_PROXY_HOPS</code>, collapsing IPv6 to /64. IPs are stored only as salted SHA-256 hashes.</li>
+<li>Multi-document writes run in a transaction with retry. That covers a payout with its work-order sums, a paid team payout with its work-log locks, enquiry conversion, admin role changes and every audit write.</li>
+</ul>
+<h4>Data protection</h4>
+<ul>
+<li>Services return DTOs from <code>src/services/serialize</code>. Password hashes, pay notes, payment notes and IP hashes never leave the server unless the viewer holds the capability for them.</li>
+<li>Private media (receipts, attachments) is served only to signed-in admins with the matching money capability. Public media is served from <code>/media/[id]/[filename]</code> with immutable caching. SVG is sanitised on upload and served with <code>Content-Security-Policy: sandbox</code> and <code>nosniff</code>.</li>
+<li><code>/admin</code> and <code>/api/admin</code> send <code>Cache-Control: no-store</code> and <code>X-Robots-Tag: noindex, nofollow</code>. Admin layouts are <code>force-dynamic</code>.</li>
+<li>Site-wide headers are CSP with <code>connect-src 'self' https://api.web3forms.com</code> and <code>form-action 'self' https://api.web3forms.com</code>, <code>frame-ancestors 'none'</code>, HSTS, <code>nosniff</code>, <code>Referrer-Policy: strict-origin-when-cross-origin</code> and a Permissions-Policy that turns off camera, microphone, geolocation and payment.</li>
+<li><code>audit:boundaries</code> fails the build if a client component imports models, the database, auth or bcrypt, or if anything under <code>src/app/admin</code> reaches three.js or the 3D scene folder.</li>
+</ul>
+<h4>Enquiry intake with Web3Forms</h4>
+<ul>
+<li>The contact form fetches a signed form token from <code>/api/form-token</code> (HMAC with <code>FORM_TOKEN_SECRET</code> and the issue time).</li>
+<li>On submit the browser sends two requests at once with <code>Promise.allSettled</code>. One goes to <code>https://api.web3forms.com/submit</code> with <code>NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY</code>, which is public by design and restricted to the ProDevly domain in the Web3Forms dashboard. The other goes to <code>/api/leads</code>.</li>
+<li><code>/api/leads</code> checks Content-Length (32 KB cap), same origin, the <code>leadCreate</code> rate limit of 5 per 10 minutes per IP (fails open), the form token (under 3 seconds is a silent discard, over 2 hours asks the visitor to refresh), the honeypot field <code>companyWebsite</code> (silent discard with a decoy 200), zod, spam heuristics and the 10-minute duplicate window. It then saves the lead and an audit entry and answers 201.</li>
+<li>The visitor sees success when either request succeeded. When both fail, the form shows the error and the email address from <code>siteInfo</code>.</li>
+</ul>
+</div>
+</div>
+
+<h3>8. Routes</h3>
+<p>Reads happen in Server Components, which call services directly using URL search params for filters, sorting and paging. All mutations go through route handlers under <code>/api/admin</code> using <code>withRoute</code> and the admin <code>api-client</code>, followed by <code>router.refresh()</code>. The app uses no Server Actions, so authorisation, CSRF checks, rate limits and audit run through one path and the smoke test can exercise all of it over HTTP.</p>
+<h4>Admin pages</h4>
+<div class="tbl-wrap"><table class="tbl">
+<thead><tr><th>Route</th><th>Page</th><th>Needs</th></tr></thead>
+<tbody>
+<tr><td><code>/admin/login</code></td><td>Sign in</td><td>Public</td></tr>
+<tr><td><code>/admin/auth/clear</code></td><td>Route handler that deletes an invalid cookie and redirects to login</td><td>Public</td></tr>
+<tr><td><code>/admin</code></td><td>Overview dashboard</td><td><code>dashboard:view</code></td></tr>
+<tr><td><code>/admin/my</code></td><td>My tasks, quick time log, my dashboard, my payouts</td><td>Signed in</td></tr>
+<tr><td><code>/admin/account</code>, <code>/admin/account/password</code></td><td>Own profile, password change, sign out everywhere</td><td>Signed in</td></tr>
+<tr><td><code>/admin/clients</code>, <code>/new</code>, <code>/[clientId]</code></td><td>Dashboard and list, create, detail with <code>?tab=overview|projects|money|activity</code></td><td><code>client:view</code>, <code>client:edit</code>. Money tab needs <code>payment:view</code></td></tr>
+<tr><td><code>/admin/projects</code>, <code>/new</code>, <code>/[projectId]</code></td><td>Dashboard and list, create, detail with <code>?tab=overview|tasks|money|team|activity</code></td><td><code>project:view</code>, <code>project:edit</code></td></tr>
+<tr><td><code>/admin/tasks</code>, <code>/[taskId]</code></td><td>Dashboard with <code>?view=list|board</code>, task detail with work logs and history</td><td><code>task:view</code></td></tr>
+<tr><td><code>/admin/work-logs</code></td><td>All work logs with filters</td><td><code>worklog:viewAll</code></td></tr>
+<tr><td><code>/admin/payments</code>, <code>/new</code>, <code>/[paymentId]</code></td><td>Client payments</td><td><code>payment:view</code>, <code>payment:record</code></td></tr>
+<tr><td><code>/admin/third-parties</code>, <code>/new</code>, <code>/[thirdPartyId]</code></td><td>Third-party dashboard, directory and detail</td><td><code>thirdParty:view</code></td></tr>
+<tr><td><code>/admin/third-parties/work-orders</code>, <code>/[workOrderId]</code></td><td>Work orders</td><td><code>payout:view</code></td></tr>
+<tr><td><code>/admin/third-parties/payouts</code>, <code>/new</code>, <code>/[payoutId]</code></td><td>Third-party payouts</td><td><code>payout:view</code>, <code>payout:record</code></td></tr>
+<tr><td><code>/admin/expenses</code>, <code>/new</code>, <code>/[expenseId]</code></td><td>Expenses dashboard and list, submit or record, detail</td><td><code>expense:submit</code> for own, <code>expense:view</code> for all</td></tr>
+<tr><td><code>/admin/team</code>, <code>/[adminId]</code></td><td>Team dashboard and directory, person page with per-admin dashboard</td><td><code>team:view</code>. Pay sections need <code>team:payView</code> or self</td></tr>
+<tr><td><code>/admin/team/payouts</code>, <code>/new</code>, <code>/admin/team/roles</code></td><td>Team payouts, job roles</td><td><code>teamPayout:record</code>, <code>settings:edit</code></td></tr>
+<tr><td><code>/admin/admins</code>, <code>/new</code>, <code>/[adminId]</code></td><td>Accounts, create, access page with role, grants, status, password reset and sessions</td><td><code>admin:manage</code></td></tr>
+<tr><td><code>/admin/content</code></td><td>Content dashboard and section visibility</td><td><code>content:edit</code></td></tr>
+<tr><td><code>/admin/content/showcase</code>, <code>/partners</code>, <code>/services</code>, <code>/pricing</code>, <code>/developers</code>, <code>/site</code></td><td>One list and editor per content type, plus company info</td><td><code>content:edit</code>. Publish needs <code>content:publish</code></td></tr>
+<tr><td><code>/admin/enquiries</code>, <code>/[enquiryId]</code></td><td>Enquiries dashboard, list and detail</td><td><code>lead:view</code></td></tr>
+<tr><td><code>/admin/settings</code>, <code>/settings/fx</code>, <code>/settings/lists</code></td><td>General settings, FX rates, editable lists</td><td><code>settings:edit</code>. FX page needs <code>fx:edit</code> to change rates</td></tr>
+<tr><td><code>/admin/audit</code></td><td>Audit log</td><td><code>audit:viewAll</code>, otherwise own entries only</td></tr>
+</tbody></table></div>
+
+<h4>API</h4>
+<div class="tbl-wrap"><table class="tbl">
+<thead><tr><th>Path under <code>/api/admin</code></th><th>Methods and actions</th><th>Needs</th></tr></thead>
+<tbody>
+<tr><td><code>auth/login</code>, <code>auth/logout</code>, <code>auth/password</code>, <code>auth/step-up</code>, <code>auth/sign-out-everywhere</code></td><td>POST each</td><td>Public for login and logout, signed in for the rest</td></tr>
+<tr><td><code>clients</code>, <code>clients/[id]</code></td><td>POST create, PATCH update, POST <code>[id]/archive</code> and <code>[id]/restore</code>, DELETE permanent</td><td><code>client:edit</code>, <code>client:archive</code>, <code>client:delete</code></td></tr>
+<tr><td><code>projects</code>, <code>projects/[id]</code></td><td>POST, PATCH, POST <code>[id]/status</code>, POST <code>[id]/milestones</code>, PATCH <code>[id]/milestones/[milestoneId]</code>, POST <code>[id]/archive</code></td><td><code>project:edit</code>, <code>project:archive</code>. Contract and milestone fields need <code>payment:record</code></td></tr>
+<tr><td><code>tasks</code>, <code>tasks/[id]</code></td><td>POST, PATCH, POST <code>[id]/status</code>, PUT <code>[id]/assignees</code>, POST <code>reorder</code>, DELETE</td><td><code>task:edit</code>, <code>task:delete</code></td></tr>
+<tr><td><code>work-logs</code>, <code>work-logs/[id]</code></td><td>POST, PATCH, DELETE</td><td><code>worklog:own</code>, <code>worklog:editAll</code></td></tr>
+<tr><td><code>payments</code>, <code>payments/[id]</code></td><td>POST, PATCH, POST <code>[id]/void</code></td><td><code>payment:record</code>, <code>money:void</code></td></tr>
+<tr><td><code>third-parties</code>, <code>third-parties/[id]</code></td><td>POST, PATCH, POST <code>[id]/archive</code></td><td><code>thirdParty:edit</code></td></tr>
+<tr><td><code>work-orders</code>, <code>work-orders/[id]</code></td><td>POST, PATCH, POST <code>[id]/status</code></td><td><code>payout:record</code></td></tr>
+<tr><td><code>third-party-payouts</code>, <code>third-party-payouts/[id]</code></td><td>POST, PATCH, POST <code>[id]/mark-paid</code>, POST <code>[id]/void</code></td><td><code>payout:record</code>, <code>money:approve</code>, <code>money:void</code></td></tr>
+<tr><td><code>expenses</code>, <code>expenses/[id]</code></td><td>POST, PATCH, POST <code>[id]/approve</code>, <code>[id]/reject</code>, <code>[id]/mark-paid</code>, <code>[id]/void</code></td><td><code>expense:submit</code>, <code>expense:record</code>, <code>money:approve</code>, <code>money:void</code></td></tr>
+<tr><td><code>team/roles</code>, <code>team/pay-profiles/[adminId]</code></td><td>POST and PATCH roles, PUT pay profile</td><td><code>settings:edit</code>, <code>team:payView</code> with step-up</td></tr>
+<tr><td><code>team-payouts</code>, <code>team-payouts/[id]</code>, <code>team-payouts/suggestion</code></td><td>POST, PATCH, POST <code>[id]/mark-paid</code>, POST <code>[id]/void</code>, GET suggestion with <code>adminId</code>, <code>from</code>, <code>to</code></td><td><code>teamPayout:record</code>, <code>money:approve</code>, <code>money:void</code></td></tr>
+<tr><td><code>admins</code>, <code>admins/[id]</code></td><td>POST, PATCH (name, role, grants), POST <code>[id]/reset-password</code>, <code>[id]/revoke-sessions</code>, <code>[id]/deactivate</code>, <code>[id]/reactivate</code></td><td><code>admin:manage</code>, step-up for each</td></tr>
+<tr><td><code>content/[type]</code>, <code>content/[type]/[id]</code>, <code>content/site</code></td><td>POST, PATCH, POST <code>[id]/publish</code>, <code>[id]/unpublish</code>, <code>[id]/archive</code>, POST <code>[type]/reorder</code>, PUT site</td><td><code>content:edit</code>, <code>content:publish</code></td></tr>
+<tr><td><code>media</code>, <code>media/[id]</code></td><td>POST multipart upload, DELETE when unreferenced</td><td><code>content:edit</code> for public, the money capability for receipts</td></tr>
+<tr><td><code>enquiries/[id]</code></td><td>PATCH, POST <code>[id]/notes</code>, <code>[id]/convert</code>, <code>[id]/spam</code>, DELETE</td><td><code>lead:edit</code>, <code>lead:delete</code></td></tr>
+<tr><td><code>settings</code>, <code>fx-rates</code>, <code>fx-rates/[id]</code>, <code>fx-rates/lookup</code></td><td>PATCH settings, POST and PATCH rates, GET lookup with <code>currency</code> and <code>date</code></td><td><code>settings:edit</code>, <code>fx:edit</code>, signed in for lookup</td></tr>
+<tr><td><code>lookup/clients</code>, <code>lookup/projects</code>, <code>lookup/tasks</code>, <code>lookup/admins</code>, <code>lookup/third-parties</code></td><td>GET with <code>q</code> and parent id for the cascading client, project and task pickers</td><td>View capability of each entity</td></tr>
+<tr><td><code>exports/[section]</code></td><td>GET CSV with the current filters, audit-logged</td><td><code>export:data</code> with step-up</td></tr>
+</tbody></table></div>
+<p>Public and system routes are <code>POST /api/leads</code>, <code>GET /api/form-token</code>, <code>GET /media/[id]/[filename]</code>, and <code>GET /api/cron/fx</code>, which needs <code>Authorization: Bearer CRON_SECRET</code>. Content writes call <code>revalidateTag('content:&lt;type&gt;', 'max')</code> so the home page picks up published changes. Public reads use <code>unstable_cache</code> tagged by content type.</p>
+
+<h3>9. Folder structure</h3>
+<details><summary>Next.js 16 app layout</summary>
+<ul>
+<li><code>.env.example</code> committed. <code>.gitignore</code> has <code>.env*</code>, <code>!.env.example</code> and <code>.mongo-data/</code></li>
+<li><code>.nvmrc</code> (22), <code>next.config.ts</code> (headers, no-store for admin, CSP, images), <code>package.json</code> (port defined once in the dev script)</li>
+<li><code>docs/briefs/</code> with <code>CONTRACT.md</code> and the build briefs, committed</li>
+<li><code>scripts/</code>
+<ul>
+<li><code>seed.ts</code>, <code>reset-password.ts</code>, <code>db-indexes.ts</code>, <code>dev-db.ts</code>, <code>fx-fetch.ts</code>, <code>reset-rate-limits.ts</code>, <code>smoke.ts</code>, <code>audit-filters.mjs</code>, <code>audit-boundaries.mjs</code></li>
+</ul></li>
+<li><code>src/proxy.ts</code> JWT check for <code>/admin</code></li>
+<li><code>src/app/</code>
+<ul>
+<li><code>layout.tsx</code> root html, fonts, <code>metadataBase</code>. <code>globals.css</code> tokens with <code>data-ui</code> scopes for site and admin</li>
+<li><code>(site)/layout.tsx</code>, <code>(site)/page.tsx</code> home (navbar, hero, partners, projects, services, pricing, developers, contact, footer), <code>(site)/projects/[slug]/page.tsx</code>, <code>(site)/privacy/page.tsx</code></li>
+<li><code>admin/layout.tsx</code> noindex, admin theme, <code>force-dynamic</code></li>
+<li><code>admin/login/page.tsx</code>, <code>admin/auth/clear/route.ts</code></li>
+<li><code>admin/(workspace)/layout.tsx</code> guard and shell, <code>admin/(workspace)/page.tsx</code> overview</li>
+<li><code>admin/(workspace)/</code> folders <code>my</code>, <code>account</code>, <code>clients</code>, <code>projects</code>, <code>tasks</code>, <code>work-logs</code>, <code>payments</code>, <code>third-parties</code>, <code>expenses</code>, <code>team</code>, <code>admins</code>, <code>content</code>, <code>enquiries</code>, <code>settings</code>, <code>audit</code>, each with <code>page.tsx</code>, <code>new/page.tsx</code>, <code>[id]/page.tsx</code>, <code>loading.tsx</code> and <code>error.tsx</code> where they apply</li>
+<li><code>api/leads/route.ts</code>, <code>api/form-token/route.ts</code>, <code>api/cron/fx/route.ts</code></li>
+<li><code>api/admin/</code> one folder per resource from section 8, each with <code>route.ts</code> and action sub-folders</li>
+<li><code>media/[id]/[filename]/route.ts</code>, <code>sitemap.ts</code>, <code>robots.ts</code>, <code>opengraph-image.tsx</code></li>
+</ul></li>
+<li><code>src/components/</code>
+<ul>
+<li><code>ui/</code> primitives (button, field, native dialog, drawer, confirm dialog, table, pagination, status badge, combobox, toast), no barrel file</li>
+<li><code>admin/</code> shell (sidebar, topbar, page header), data toolbar, period picker, stat tile, chart card with table switch, money input, FX field, cascading entity picker, status history, audit feed, step-up prompt</li>
+<li><code>site/</code> home sections and the contact form</li>
+<li><code>three/</code> scene and totems, client only, never imported by admin code</li>
+</ul></li>
+<li><code>src/config/</code> <code>capabilities.ts</code> (capabilities, role defaults, grantable set, dependencies), <code>admin-nav.ts</code> (capability-gated nav), <code>currencies.ts</code>, <code>statuses.ts</code> (enums and allowed transitions), <code>rate-limits.ts</code></li>
+<li><code>src/models/</code> <code>index.ts</code> plus one file per collection. <code>models/schemas/</code> holds <code>money.schema.ts</code>, <code>actor.schema.ts</code>, <code>status-history.schema.ts</code>, <code>address.schema.ts</code></li>
+<li><code>src/services/</code>
+<ul>
+<li><code>auth</code>, <code>admin</code>, <code>team</code>, <code>client</code>, <code>project</code>, <code>task</code>, <code>work-log</code>, <code>client-payment</code>, <code>third-party</code>, <code>work-order</code>, <code>third-party-payout</code>, <code>expense</code>, <code>team-payout</code>, <code>fx</code>, <code>lead</code>, <code>content</code>, <code>media</code>, <code>settings</code>, <code>export</code>, each as <code>&lt;name&gt;.service.ts</code></li>
+<li><code>dashboards/</code> <code>ledger.ts</code>, <code>overview.ts</code>, <code>clients.ts</code>, <code>projects.ts</code>, <code>tasks.ts</code>, <code>payments.ts</code>, <code>third-parties.ts</code>, <code>expenses.ts</code>, <code>team.ts</code>, <code>person.ts</code>, <code>admins.ts</code>, <code>content.ts</code>, <code>enquiries.ts</code>, <code>fx.ts</code>, <code>audit.ts</code></li>
+<li><code>serialize/</code> DTO mappers per entity</li>
+</ul></li>
+<li><code>src/lib/</code>
+<ul>
+<li><code>db/</code> <code>mongoose.ts</code> (cached connection, <code>sanitizeFilter</code>, <code>strictQuery</code>, autoIndex off in production, appName prodevly), <code>transaction.ts</code> (with-transaction helper with retry), <code>gridfs.ts</code></li>
+<li><code>auth/</code> <code>session.ts</code>, <code>password.ts</code>, <code>guard.ts</code> (<code>getCurrentAdmin</code>, <code>requireAdminPage</code>, <code>requireCapability</code>), <code>step-up.ts</code>, <code>safe-next-path.ts</code></li>
+<li><code>api/</code> <code>handler.ts</code> (<code>withRoute</code>), <code>errors.ts</code>, <code>response.ts</code>, <code>request.ts</code>, <code>client-ip.ts</code>, <code>rate-limit.ts</code>, <code>spam.ts</code>, <code>form-token.ts</code></li>
+<li><code>money/</code> <code>minor.ts</code> (parse and format), <code>fx.ts</code> (<code>resolveRate</code>, <code>toInrMinor</code>), <code>margin.ts</code></li>
+<li><code>dates/</code> <code>date-only.ts</code>, <code>fiscal-year.ts</code>, <code>ranges.ts</code> (period presets in Asia/Kolkata)</li>
+<li><code>validation/</code> zod schemas per entity, shared by forms and route handlers</li>
+<li><code>admin/</code> <code>api-client.ts</code>, <code>use-admin-list.ts</code>, <code>use-step-up.ts</code></li>
+<li><code>content/</code> cached public reads tagged by content type</li>
+<li><code>audit.ts</code> the single <code>audit()</code> helper used by every service</li>
+</ul></li>
+<li><code>src/types/</code> <code>dto.ts</code>, <code>api.ts</code></li>
+</ul>
+</details>
+
+<h3>10. Seed and scripts</h3>
+<h4>Superadmin seed, <code>npm run seed</code></h4>
+<ol>
+<li>Loads env with <code>@next/env</code> so <code>.env.local</code> works.</li>
+<li>Validates everything before connecting. The script holds the three names, Aman Gupta, Lakshya Sharma and Shivansh Kaushik. Emails and initial passwords come only from <code>SEED_AMAN_EMAIL</code>, <code>SEED_AMAN_PASSWORD</code>, <code>SEED_LAKSHYA_EMAIL</code>, <code>SEED_LAKSHYA_PASSWORD</code>, <code>SEED_SHIVANSH_EMAIL</code> and <code>SEED_SHIVANSH_PASSWORD</code>. Each password must pass the live <code>passwordSchema</code> from <code>src/lib/validation/auth.ts</code>, and the three emails must differ. Any missing or weak value stops the script with a message naming the variable and exit code 1. No email or password is written in code.</li>
+<li>Connects with the URI masked in logs. For each person it runs <code>updateOne({ email }, { $setOnInsert: { ... } }, { upsert: true })</code> with role <code>superadmin</code>, status <code>active</code>, <code>mustChangePassword: true</code>, <code>tokenVersion: 0</code> and a bcrypt hash at cost 12. An account that already exists keeps its password, role and status. Running the seed again changes nothing.</li>
+<li>Creates with <code>$setOnInsert</code> the <code>settings</code> document <code>global</code>, the <code>siteInfo</code> document <code>site</code> with only the display name, and the internal client "ProDevly (internal)".</li>
+<li>Writes an audit entry <code>seed.superadmin_created</code> for each account it created, with the actor "seed script".</li>
+<li>Prints name, email and created or already present for each person, and a reminder to remove the six <code>SEED_*</code> variables after the first sign-in.</li>
+<li>With <code>NODE_ENV=production</code> it also requires <code>--confirm-production</code>.</li>
+</ol>
+<p>On first sign-in the guard sends each superadmin to <code>/admin/account/password</code>. Nothing else works until they set a new password, which must differ from the seeded one. The change clears <code>mustChangePassword</code>, increments <code>tokenVersion</code> and reissues the cookie.</p>
+
+<h4>Scripts</h4>
+<div class="tbl-wrap"><table class="tbl">
+<thead><tr><th>Command</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><code>npm run dev:db</code></td><td>Starts a single-node <code>MongoMemoryReplSet</code> from mongodb-memory-server on port 27018 with replica set <code>rs0</code> and data in <code>.mongo-data/</code>. A replica set is used so transactions behave as on Atlas. Use <code>MONGODB_URI=mongodb://127.0.0.1:27018/prodevly?replicaSet=rs0</code>.</td></tr>
+<tr><td><code>npm run seed</code></td><td>The idempotent superadmin seed above.</td></tr>
+<tr><td><code>npm run db:indexes</code></td><td>Imports every model, prints <code>diffIndexes()</code> for each, then runs <code>syncIndexes()</code>. <code>--dry-run</code> only prints. Runs in the deploy pipeline before traffic, because autoIndex is off in production and the TTL and unique indexes depend on it.</td></tr>
+<tr><td><code>npm run admin:reset-password -- --email &lt;email&gt;</code></td><td>Break-glass reset for when no superadmin can sign in. Takes the new password from <code>RESET_PASSWORD</code>, sets <code>mustChangePassword</code>, increments <code>tokenVersion</code>, clears the lockout and writes an audit entry.</td></tr>
+<tr><td><code>npm run fx:fetch</code></td><td>Pulls ECB reference rates through the Frankfurter API for the enabled currencies into <code>fxRates</code> with source <code>ecb</code>. It never overwrites a manual rate for the same date. <code>/api/cron/fx</code> runs the same code on a daily schedule.</td></tr>
+<tr><td><code>npm run reset:rate-limits</code></td><td>Clears <code>rateLimits</code> in development and test. Smoke tests use it so they never spoof forwarding headers.</td></tr>
+<tr><td><code>npm run verify</code></td><td>Lint, <code>audit:filters</code>, <code>audit:boundaries</code>, <code>next typegen &amp;&amp; tsc --noEmit</code>, then <code>next build</code>.</td></tr>
+<tr><td><code>npm run smoke</code></td><td>Black-box HTTP test with a cookie jar against a running dev server and the dev database.</td></tr>
+</tbody></table></div>
+
+<details><summary>Smoke test checks</summary>
+<ul>
+<li>A signed-out request to <code>/admin</code> redirects once to <code>/admin/login</code>.</li>
+<li>After <code>tokenVersion</code> is bumped, a request with the old cookie redirects once through <code>/admin/auth/clear</code> to login.</li>
+<li>A seeded superadmin gets <code>PASSWORD_CHANGE_REQUIRED</code> until the password is changed.</li>
+<li>A superadmin creates an admin. That admin gets 403 on <code>/api/admin/admins</code> and on payment routes, and gets access to payments after a grant.</li>
+<li>Self-deactivation answers <code>SELF_ACTION</code>. Demoting the last active superadmin answers <code>LAST_SUPERADMIN</code>.</li>
+<li>A payment naming a task from another project answers <code>LINK_MISMATCH</code>.</li>
+<li>A USD payment stores rate and INR. The payments dashboard total equals the sum of <code>inrMinor</code>, and voiding the entry removes it from the total.</li>
+<li>A payout against a work order in another currency answers <code>CURRENCY_MISMATCH</code>.</li>
+<li>Marking a team payout paid locks the work logs in its period.</li>
+<li>The contact form honeypot returns a decoy success and stores nothing. A valid enquiry is stored and appears in <code>/admin/enquiries</code>.</li>
+</ul>
+</details>
+
+<details><summary>Environment variables in <code>.env.example</code></summary>
+<ul>
+<li><code>MONGODB_URI</code></li>
+<li><code>AUTH_SECRET</code> and <code>FORM_TOKEN_SECRET</code>, each generated with <code>openssl rand -base64 48</code></li>
+<li><code>IP_HASH_SALT</code>, <code>CRON_SECRET</code>, <code>TRUSTED_PROXY_HOPS</code></li>
+<li><code>NEXT_PUBLIC_SITE_URL</code>, <code>NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY</code></li>
+<li><code>SEED_AMAN_EMAIL</code>, <code>SEED_AMAN_PASSWORD</code>, <code>SEED_LAKSHYA_EMAIL</code>, <code>SEED_LAKSHYA_PASSWORD</code>, <code>SEED_SHIVANSH_EMAIL</code>, <code>SEED_SHIVANSH_PASSWORD</code>, left blank in the example file</li>
+<li><code>RESET_PASSWORD</code>, used only by the break-glass script and blank in the example file</li>
+</ul>
+<p>Secrets are never pasted into chat or committed. Real values live in <code>.env.local</code> and in the hosting provider's environment settings.</p>
+</details>

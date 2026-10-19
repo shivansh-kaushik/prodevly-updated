@@ -1,0 +1,195 @@
+/*
+ * Keycap Colorway: the key component and the page furniture that Tailwind utilities
+ * do not express. Fields, inks and faces are tokens in globals.css (@theme).
+ * Layer order (docs/plan/engineering.html section 3): section fields z 0, the stage
+ * canvas z 10, content z 20, the nav z 40. Sections never create a stacking context.
+ */
+@layer components {
+.pd-site {
+  font-family: var(--font-body);
+  font-weight: 440;
+  -webkit-font-smoothing: antialiased;
+  background: var(--color-graphite);
+  color: var(--color-graphite);
+}
+.pd-display {
+  font-family: var(--font-display);
+  font-stretch: 125%;
+  font-weight: 860;
+  letter-spacing: -0.016em;
+  line-height: 0.96;
+  text-wrap: balance;
+}
+.pd-mono {
+  font-family: var(--font-key);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.pd-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  font-family: var(--font-key);
+  font-weight: 500;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.pd-kicker::before {
+  content: '';
+  width: 2.2em;
+  height: 2px;
+  background: currentColor;
+}
+
+/* An action: a flat pill in a colourway tone, label and arrow centred, darker on hover. Sized in em. */
+.pd-key {
+  --kc: var(--color-tomato-key);
+  --ks: var(--color-tomato-key-side);
+  --ki: var(--color-chalk);
+  /* Positioned, so screen-reader text inside (absolute, .sr-only) stays inside the pill and never escapes a scrolling rail. */
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6em;
+  padding: 0.8em 1.4em;
+  border: 0;
+  border-radius: 999px;
+  background: var(--kc);
+  color: var(--ki);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  line-height: 1.1;
+  letter-spacing: 0.005em;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease-out,
+    transform 120ms ease-out;
+}
+.pd-key:hover {
+  background: color-mix(in srgb, var(--kc) 86%, black);
+}
+.pd-key:active {
+  transform: translateY(1px);
+}
+.pd-key[data-on='true'] {
+  box-shadow: 0 0 0 2px var(--color-chalk);
+}
+.pd-key:focus-visible {
+  outline: 3px solid var(--color-graphite);
+  outline-offset: 3px;
+}
+.pd-key--chalk {
+  --kc: var(--color-chalk);
+  --ks: var(--color-chalk-side);
+  --ki: var(--color-graphite);
+}
+.pd-key--graphite {
+  --kc: var(--color-graphite);
+  --ks: var(--color-graphite-side);
+  --ki: var(--color-chalk);
+}
+.pd-key--yolk {
+  --kc: var(--color-yolk);
+  --ks: var(--color-yolk-side);
+  --ki: var(--color-graphite);
+}
+.pd-key--mint {
+  --kc: var(--color-mint);
+  --ks: var(--color-mint-side);
+  --ki: var(--color-graphite);
+}
+.pd-key--white {
+  --kc: #fff;
+  --ks: var(--color-chalk-side);
+  --ki: var(--color-graphite);
+}
+.pd-key--cobalt {
+  --kc: var(--color-cobalt);
+  --ks: var(--color-cobalt-side);
+  --ki: var(--color-chalk);
+}
+/* On a graphite or cobalt field, focus rings turn chalk. */
+.pd-on-dark .pd-key:focus-visible,
+.pd-on-dark a:focus-visible,
+.pd-on-dark button:focus-visible {
+  outline-color: var(--color-chalk);
+}
+
+/*
+ * Copy that sits on the bare field (headings, ledes) carries a soft halo in the field's own
+ * colour. At rest it is invisible; while a cap flies behind the copy between stations, it
+ * keeps the text legible without boxing it in.
+ */
+.pd-halo {
+  text-shadow:
+    0 0 0.25em var(--field),
+    0 0 0.6em var(--field),
+    0 0 1.2em var(--field);
+}
+
+/* The stage zone: where the totem stands. The poster fills it until the canvas has drawn. */
+.pd-zone {
+  position: relative;
+  min-height: 20svh;
+  pointer-events: none;
+}
+/* The poster never sizes the zone: the grid does, and the poster fills it (the same rect the stage frames into). */
+.pd-zone img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* The nav's keys: pressed while their section is on screen, with an LED that remembers visited sections. */
+.pd-nav-key {
+  position: relative;
+}
+/* The LED: a dot that stays lit for every section already visited. */
+.pd-nav-key::after {
+  content: '';
+  width: 0.4em;
+  height: 0.4em;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.22);
+}
+.pd-nav-key[data-seen='true']::after {
+  background: var(--color-graphite);
+}
+.pd-nav-key--graphite[data-seen='true']::after {
+  background: var(--color-mint);
+}
+.pd-nav-key--tomato[data-seen='true']::after {
+  background: var(--color-chalk);
+}
+
+/* Rails: a row of solid cards that snaps on a phone and lays out in a row on desktop. */
+.pd-rail {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding: 0.25rem 0.25rem 1rem;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.pd-rail::-webkit-scrollbar {
+  display: none;
+}
+.pd-rail > * {
+  scroll-snap-align: center;
+  flex: 0 0 min(80vw, 22rem);
+}
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pd-key {
+    transition: none;
+  }
+}

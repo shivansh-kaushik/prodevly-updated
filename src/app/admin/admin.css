@@ -1,0 +1,193 @@
+/*
+ * The admin panel's visual system: a LEDGER. Ivory paper, ink, hairline rules, one red
+ * accent (the rubric, the red margin line of an account book), serif figures with tabular
+ * numerals, and totals drawn the accountant's way (one rule above, a double rule below).
+ *
+ * Names are in the product's own vocabulary (paper, leaf, ink, rule, rubric, credit) so a
+ * reader of the tokens can tell what this is for. Tokens are prefixed `pd-` (CONTRACT 5).
+ * Depth is borders-only: hairline rules, with a shadow ring on floating surfaces only.
+ *
+ * Contrast (WCAG): ink 14.7, ink-2 7.9, ink-3 4.8 on paper; rubric 5.9; credit 6.0; white on rubric 6.3.
+ */
+@theme {
+  /* Surfaces, each a few points apart. Inputs are one step DARKER than the page: they receive content. */
+  --color-pd-paper: #faf7f0;
+  --color-pd-leaf: #fdfbf6;
+  --color-pd-sheet: #fffefb;
+  --color-pd-well: #f2eee3;
+
+  /* Ink: four text levels. ink-4 is for disabled and decorative marks only, never for reading. */
+  --color-pd-ink: #1c2332;
+  --color-pd-ink-2: #444d60;
+  --color-pd-ink-3: #5d6679;
+  --color-pd-ink-4: #9aa1b0;
+
+  /* Rules: hairlines that disappear until you look for them. */
+  --color-pd-rule: rgb(28 35 50 / 0.12);
+  --color-pd-rule-soft: rgb(28 35 50 / 0.07);
+  --color-pd-rule-strong: rgb(28 35 50 / 0.26);
+
+  /* The rubric: the one accent. Primary actions, the selected nav mark, things that need attention. */
+  --color-pd-rubric: #b3301d;
+  --color-pd-rubric-deep: #8f2414;
+  --color-pd-rubric-wash: rgb(179 48 29 / 0.08);
+
+  /* Meaning, kept apart from the accent. Money in is credit green; amber warns; blue informs. */
+  --color-pd-credit: #1d6b49;
+  --color-pd-credit-wash: rgb(29 107 73 / 0.09);
+  --color-pd-amber: #8a5a08;
+  --color-pd-amber-wash: rgb(138 90 8 / 0.1);
+  --color-pd-blue: #2d4b8e;
+  --color-pd-blue-wash: rgb(45 75 142 / 0.09);
+  --color-pd-violet: #6a4a98;
+  --color-pd-violet-wash: rgb(106 74 152 / 0.09);
+
+  --font-pd-ui: 'IBM Plex Sans Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-pd-serif: 'Source Serif 4 Variable', ui-serif, Georgia, 'Times New Roman', serif;
+  --font-pd-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Radius scale: small for controls, medium for panels, large for dialogs. */
+  --radius-pd-sm: 4px;
+  --radius-pd-md: 6px;
+  --radius-pd-lg: 10px;
+
+  /* Floating surfaces: a ring and two soft depths. Everything else is flat with a hairline. */
+  --shadow-pd-float: 0 0 0 1px rgb(28 35 50 / 0.1), 0 2px 4px -1px rgb(28 35 50 / 0.08), 0 8px 24px -6px rgb(28 35 50 / 0.14);
+
+  --ease-pd-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* The wrapper every admin screen sits in. */
+.pd-admin {
+  min-height: 100svh;
+  background: var(--color-pd-paper);
+  color: var(--color-pd-ink);
+  font-family: var(--font-pd-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  font-feature-settings: 'kern', 'liga';
+  text-wrap: pretty;
+  -webkit-font-smoothing: antialiased;
+}
+.pd-admin :where(h1, h2, h3) {
+  text-wrap: balance;
+}
+.pd-admin :focus-visible {
+  outline: 2px solid var(--color-pd-blue);
+  outline-offset: 2px;
+  border-radius: var(--radius-pd-sm);
+}
+.pd-admin ::selection {
+  background: var(--color-pd-rubric-wash);
+}
+
+@layer components {
+  /* Figures: lining, tabular, so columns of money line up on the decimal point. */
+  .pd-figure {
+    font-variant-numeric: lining-nums tabular-nums;
+    font-feature-settings: 'lnum', 'tnum';
+  }
+
+  /* Small caps label above a value. */
+  .pd-eyebrow {
+    font-size: 11px;
+    line-height: 16px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-pd-ink-3);
+  }
+
+  /* The accountant's total: a single rule above, a double rule below. */
+  .pd-total {
+    border-top: 1px solid var(--color-pd-rule-strong);
+    border-bottom: 4px double var(--color-pd-rule-strong);
+  }
+  /* A subtotal: just the single rule. */
+  .pd-subtotal {
+    border-top: 1px solid var(--color-pd-rule-strong);
+  }
+
+  /* The red margin line of a ledger, used ONLY on something that needs attention. */
+  .pd-margin-flag {
+    box-shadow: inset 2px 0 0 var(--color-pd-rubric);
+  }
+
+  /* Checkbox: native control (keyboard, forms) drawn in the ledger's ink. */
+  .pd-checkbox {
+    appearance: none;
+    flex: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    cursor: pointer;
+    background-color: var(--color-pd-well);
+    box-shadow: inset 0 0 0 1px var(--color-pd-rule-strong);
+    transition: background-color 120ms var(--ease-pd-out);
+  }
+  .pd-checkbox:checked {
+    background-color: var(--color-pd-ink);
+    box-shadow: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-6.5' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+  .pd-checkbox:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Native dialog: centred, origin-aware entry, no scroll chaining. */
+  .pd-dialog {
+    /* Tailwind's preflight zeroes every margin, which would pin a modal dialog to the top-left: centre it again. */
+    margin: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    max-width: 100vw;
+    max-height: 100svh;
+    overflow: visible;
+  }
+  .pd-dialog::backdrop {
+    background: rgb(28 35 50 / 0.42);
+    animation: pd-fade 160ms var(--ease-pd-out);
+  }
+  .pd-dialog[open] > .pd-dialog-panel {
+    animation: pd-pop 180ms var(--ease-pd-out);
+  }
+  .pd-dialog[open] > .pd-drawer-panel {
+    animation: pd-slide 220ms var(--ease-pd-out);
+  }
+  .pd-skeleton {
+    background: linear-gradient(90deg, var(--color-pd-well) 0%, var(--color-pd-rule-soft) 50%, var(--color-pd-well) 100%);
+    background-size: 200% 100%;
+    animation: pd-shimmer 1.4s linear infinite;
+  }
+}
+
+@keyframes pd-fade {
+  from { opacity: 0; }
+}
+@keyframes pd-pop {
+  from { opacity: 0; transform: scale(0.96); }
+}
+@keyframes pd-slide {
+  from { opacity: 0.6; transform: translateX(24px); }
+}
+@keyframes pd-shimmer {
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pd-dialog::backdrop,
+  .pd-dialog[open] > .pd-dialog-panel,
+  .pd-dialog[open] > .pd-drawer-panel,
+  .pd-skeleton {
+    animation: none;
+  }
+}
+
+@media print {
+  .pd-admin {
+    background: #fff;
+  }
+}

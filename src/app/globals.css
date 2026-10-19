@@ -1,0 +1,76 @@
+@import 'tailwindcss';
+@import './admin/admin.css';
+
+/*
+ * Neutral base. Each design direction adds its own field, ink and type tokens in
+ * @theme on its branch; the admin panel gets its own scoped tokens.
+ * House utilities and classes are prefixed `pd-` so they can never collide with a
+ * core Tailwind utility name.
+ */
+/*
+ * `pd-split:` - two-column layouts. Matches the 3D stage's mid and wide aspect
+ * buckets (aspect >= 0.8, src/lib/stage-store.ts `bucketFor`) at tablet width and
+ * up, so a portrait tablet keeps the stacked phone composition its `tall` poses
+ * are framed for.
+ */
+@custom-variant pd-split (@media (min-width: 768px) and (min-aspect-ratio: 4/5));
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+/* `static`: the plain CSS in keycap.css reads these, and Tailwind would otherwise drop the ones no utility uses. */
+@theme static {
+  /* Keycap Colorway (docs/plan/directions.json, id `keys`). Each colour has a darker skirt for the key shadow. */
+  --color-chalk: #eef1f0;
+  --color-chalk-side: #c7cecb;
+  --color-graphite: #1b1d22;
+  --color-graphite-side: #08090b;
+  --color-cobalt: #2340c8;
+  --color-cobalt-side: #162a8e;
+  --color-tomato: #e5362c;
+  --color-tomato-side: #a9221b;
+  /* The tomato KEY face is a shade deeper than the tomato field, so chalk labels on it meet AA (4.5). */
+  --color-tomato-key: #cc2b22;
+  --color-tomato-key-side: #9e1f18;
+  --color-yolk: #f6c12b;
+  --color-yolk-side: #c9920e;
+  --color-mint: #8fd8c0;
+  --color-mint-side: #5fae95;
+}
+
+/* The faces come from next/font variables set on the public site's wrapper, so resolve them where they are used. */
+@theme inline {
+  --font-display: var(--font-hubot), 'Mona Sans', system-ui, sans-serif;
+  --font-body: var(--font-mona), system-ui, sans-serif;
+  --font-key: var(--font-martian), ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: #fff;
+  color: #111;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* One visible focus ring for every interactive element. */
+:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+}

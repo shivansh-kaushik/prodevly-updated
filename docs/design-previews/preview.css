@@ -1,0 +1,111 @@
+/* Preview frame shared by plan.html and dev.html. Tokens come from the host page. */
+.pv { display: grid; gap: 12px; margin: 0; min-width: 0; }
+.pv-stagewrap {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--pv-well, #1b1d22);
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.pv-viewport {
+  position: relative;
+  inline-size: 100%;
+  aspect-ratio: 16 / 9.5;
+  overflow: hidden;
+  touch-action: pan-y;
+  cursor: ns-resize;
+}
+.pv.is-phone .pv-stagewrap { padding-block: 18px; }
+.pv.is-phone .pv-viewport {
+  inline-size: min(100%, 300px);
+  aspect-ratio: 390 / 780;
+  border-radius: 26px;
+  box-shadow: 0 0 0 7px #0d0e10, 0 0 0 8px #3a3d44;
+}
+.pv-viewport canvas.stage-canvas {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  display: block;
+  z-index: 0;
+}
+.pv-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  container-type: size;
+  container-name: pv;
+  overflow: hidden;
+}
+.pv-overlay * { pointer-events: none; }
+.pv-hint {
+  position: absolute;
+  inset-block-end: 10px;
+  inset-inline-end: 12px;
+  font: 500 11px/1 var(--mono, ui-monospace, monospace);
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.78);
+  background: rgba(10, 10, 12, 0.55);
+  padding: 6px 8px;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 2;
+}
+.pv.is-phone .pv-hint { display: none; }
+.pv-error {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: #f4f4f4;
+  font: 14px/1.5 var(--mono, ui-monospace, monospace);
+  text-align: center;
+}
+.pv-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  min-width: 0;
+}
+.pv-controls button {
+  font: 600 12px/1 var(--ui, system-ui, sans-serif);
+  letter-spacing: 0.02em;
+  padding: 8px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line, #c9ccd3);
+  background: var(--surface, #fff);
+  color: var(--fg, #15171c);
+  cursor: pointer;
+}
+.pv-controls button[aria-pressed='true'],
+.pv-chip[aria-current='true'] {
+  background: var(--fg, #15171c);
+  color: var(--bg, #fff);
+  border-color: var(--fg, #15171c);
+}
+.pv-controls button:focus-visible { outline: 2px solid var(--focus, #2f6bff); outline-offset: 2px; }
+.pv-scrub { flex: 1 1 160px; min-width: 120px; accent-color: var(--fg, #15171c); }
+.pv-chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.pv-device-group { display: inline-flex; gap: 4px; }
+.pv-readout {
+  display: grid;
+  gap: 4px;
+  font: 500 11px/1.2 var(--mono, ui-monospace, monospace);
+  color: var(--muted, #5b606b);
+  min-width: 190px;
+  flex: 1 1 190px;
+}
+.pv-readout-row { display: grid; grid-template-columns: 112px 1fr 38px; align-items: center; gap: 8px; }
+.pv-bar { block-size: 4px; background: var(--line, #d9dce3); border-radius: 2px; overflow: hidden; }
+.pv-bar > span { display: block; block-size: 100%; inline-size: 0; background: var(--muted, #5b606b); }
+.pv-bar > .pv-bar-render { background: var(--fg, #15171c); }
+.pv-readout-row b { font-weight: 600; color: var(--fg, #15171c); text-align: end; font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) {
+  .pv-viewport { aspect-ratio: 4 / 3.4; }
+}

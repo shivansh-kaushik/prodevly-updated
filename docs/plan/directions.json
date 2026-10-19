@@ -1,0 +1,159 @@
+{
+  "_note": "Section progress positions are fixed for every preview: hero 0, services 0.2, projects 0.4, pricing 0.6, team (Developers) 0.8, contact 1. Research files with full detail: ../research/*.json (art-direction.json has palettes, type pairings, totem ideas, material notes; awwwards.json has the award-site survey; techniques.json has motion/mobile/perf guidance).",
+  "directions": [
+    {
+      "id": "keys",
+      "role": "lead",
+      "name": "Keycap Colorway",
+      "thesis": "Software is built by hand, one keystroke at a time. The site is a custom mechanical-keyboard colorway: every totem is a cairn of oversized sculpted keycaps, every section is a key cluster, and every action is a key that physically presses. It refuses the dark agency void with a glowing blob.",
+      "world": {
+        "palette": {
+          "chalk (alpha keycaps, light field)": "#EEF1F0",
+          "graphite (ink, mod keycaps)": "#1B1D22",
+          "cobalt (mods, hero field)": "#2340C8",
+          "tomato (accent keys, Enter)": "#E5362C",
+          "yolk (accent keys, projects field)": "#F6C12B",
+          "mint (accent keys, pricing field)": "#8FD8C0"
+        },
+        "fields_by_section": "hero cobalt (chalk type), services chalk (graphite type), projects yolk (graphite type), pricing mint (graphite type), developers tomato (chalk type, large sizes only), contact graphite (chalk type, tomato Enter key). Fields switch with a hard wipe or edge sweep at section boundaries, never a crossfade through grey.",
+        "materials": "PBT keycap plastic: roughness 0.6-0.7, faint micro-texture, sculpted dished tops (concave top surface via vertex displacement), slightly tapered sides, bevelled edges, legends printed on the top face (canvas texture, doubleshot look). Exactly one translucent resin 'artisan' keycap (transmission or a convincing fake: physical material with high clearcoat, slight opacity and inner coloured core) as the single glossy hero object. Grounding: soft contact shadow under the cairn.",
+        "type": "Display: Hubot Sans at wdth 125, wght 800-900 (pushed wide so it does not read as GitHub UI). Text: Mona Sans 400-500. Legends/mono: Martian Mono. All OFL on Google Fonts.",
+        "grid": "Layout measured in key units: 1u = a fixed module; components are 1u, 1.25u, 1.5u, 2u, 2.25u, 6.25u wide. Buttons are keycaps (Enter 2.25u, spacebar 6.25u on phone)."
+      },
+      "first_viewport": {
+        "desktop": "Cobalt field. Left five-twelfths: headline 'Web apps, SaaS and custom software, built end to end.' in wide heavy Hubot Sans, chalk. Below it 'Start a project' set as a 2.25u Enter keycap button. Right seven-twelfths: a balanced cairn of 6-7 oversized sculpted keycaps (6.25u spacebar as the base, then 2.25u Shift, Tab, Enter, Cmd, Esc, and the resin artisan cap on top), tilting gently toward the pointer.",
+        "phone": "Headline in the top third, left-aligned, large. Cairn centred in the middle, about 80% of the width. CTA as a full-width spacebar key near the bottom."
+      },
+      "chapters": {
+        "hero": "Cairn balanced, slow breathing wobble; caps nearest the pointer light up from beneath (underglow).",
+        "services": "The cairn unstacks: the same caps fly out and settle into a 3x2 key cluster seen from a 3/4 top-down camera; each cap's legend becomes a service (Web apps, SaaS, Custom, Mobile, UI/UX, Cloud). Keys press in a typing rhythm. Field: chalk.",
+        "projects": "Caps rise and stand on edge in a staggered row like record sleeves on a shelf; one at a time tilts forward showing a 'Sample project' face. Camera dollies sideways. Field: yolk.",
+        "pricing": "Caps settle onto three keyboard plates of growing size (60%, 75%, 100%) = three engagement sizes; plan names are samples, prices come from the admin. Field: mint.",
+        "team": "A row of artisan keycaps, one per developer, each with an initial legend; camera close and low. Field: tomato.",
+        "contact": "One giant Enter key, centre. It presses down and its underglow switches on as the 'send' gesture. Field: graphite."
+      },
+      "signature_interaction": "The visitor's real keyboard presses the matching 3D keys (keydown depresses the cap with real travel and a springy return). In the preview, show a periodic typing rhythm instead.",
+      "raises": [
+        "From the luminescent understory (declined): attention is illumination. Caps light from beneath only under the pointer or in the active section; resting caps stay unlit.",
+        "From the plankton wake (declined): motion leaves a fading memory. The nav is a mini key row; keys for visited sections stay softly lit, so the nav records your path.",
+        "From the single-hue toy program (declined): total colour commitment. Each chapter is drenched edge to edge in one colorway field instead of scattered rainbow accents.",
+        "From the session sleeve (declined): compositional tension. Project images crop hard to one corner with legends set at the keycap's sculpt angle, and the cairn may crop off the frame edge in transitions.",
+        "From the oscilloscope bench (declined): every division means something. The whole layout snaps to a 1u key grid."
+      ],
+      "honest_risk": "Keyboards are a developer hobby, so non-technical SMB owners may read it as 'for programmers'; the copy has to stay plain. The keycap gag can wear thin over a long page if every section leans on it, so projects and pricing must stay calm."
+    },
+    {
+      "id": "totems",
+      "role": "pick",
+      "name": "Glazed Component Totems",
+      "thesis": "Software is composed from parts. ProDevly's totems are stacked, glazed ceramic primitives in the Sottsass tradition. The same pieces lift apart and recombine into a different totem for each service, which is how real products are built from reusable components.",
+      "world": {
+        "palette": {
+          "mint laminate (page field)": "#CDE8D9",
+          "Bacterio black (ink)": "#141414",
+          "cobalt glaze": "#2340C8",
+          "yolk glaze": "#F6C12B",
+          "salmon laminate": "#F2917F",
+          "tomato": "#E5362C",
+          "laminate white (plinths)": "#FAFAF7"
+        },
+        "fields_by_section": "hero mint, services laminate white with a sparse black squiggle pattern, projects cobalt (white type), pricing yolk, developers salmon, contact Bacterio black (white type). Switch fields with a wipe at boundaries.",
+        "materials": "Glazed earthenware: clearcoat 1, clearcoatRoughness ~0.08, base roughness ~0.5, a hand-thrown wobble (low-frequency vertex noise), darker glaze pooling toward joints (vertex colour AO). Plinths: matte white laminate with a canvas-generated Memphis squiggle texture. One piece may be gold-lustre or a translucent glaze as the single hero accent.",
+        "type": "Display: Strichpunkt Sans Expanded (or Special Gothic Expanded One if Strichpunkt fails to load on Google Fonts; verify in a screenshot). Text: Strichpunkt Sans Normal (or Special Gothic). Mono for wall labels: Fragment Mono.",
+        "grid": "Gallery hang: generous margins, wall labels set like museum captions next to each totem."
+      },
+      "first_viewport": {
+        "desktop": "Mint wall. A white plinth centre-right carrying a six-piece glazed totem (drum, rounded cube, cone, torus ring, capsule, half-sphere) in cobalt, yolk, salmon, tomato, white and black. Left: headline 'Web apps, SaaS and custom software, built end to end.' and 'Start a project'. Bottom-left: a museum wall label in mono: 'Totem No. 1 - Web app. Glazed components, variable. ProDevly, 2026.'",
+        "phone": "Headline top, totem centred on its plinth in the middle, wall label and CTA in a solid laminate card at the bottom."
+      },
+      "chapters": {
+        "hero": "One tall totem on its plinth, pieces breathing slightly apart and back; pointer tilts it.",
+        "services": "Exploded view: the pieces lift apart, rotate, and re-stack into three smaller totems side by side (Web app / SaaS / Custom software), each with its own wall label. Same parts, different products.",
+        "projects": "Camera walks a gallery row of plinths; each plinth holds a totem labelled 'Sample project'. Field cobalt.",
+        "pricing": "Three plinths of increasing height carry totems of 3, 5 and 7 pieces = three engagement sizes; names are samples, prices from the admin. Field yolk.",
+        "team": "Single pieces on small plinths, each incised with a developer's initial: the makers' marks. Field salmon.",
+        "contact": "The original totem returns with an empty top slot; a new glowing piece hovers above it: 'Add the next piece.' Field black."
+      },
+      "signature_interaction": "Pieces react to the pointer: hovering lifts the nearest piece a few centimetres and it settles back with a ceramic spring when released.",
+      "raises": [],
+      "honest_risk": "Familiar: stacked shapes are where many 'component' stories land, and Memphis colour can tip into kitsch or read as a design gallery rather than a software company."
+    },
+    {
+      "id": "source",
+      "role": "challenger",
+      "verdict": "competitive",
+      "source_world": "an algorave floor, where projected live code edits the music mid-dance",
+      "name": "Live Source",
+      "thesis": "Code becomes product, live. The home page is a running program: a large source buffer types the next block as you scroll, and on the next beat the 3D totems rebuild to match. The line about to run flashes before it applies. It shows what ProDevly does instead of describing it.",
+      "world": {
+        "palette": {
+          "urushi black, warm (ground)": "#140F0D",
+          "porcelain (ink, comments in plain English)": "#F3EEE6",
+          "shu vermilion (keywords, hero lacquer)": "#E2472B",
+          "jade (strings)": "#3FA38A",
+          "citrine (numbers, the line about to run)": "#F2B33D",
+          "lapis (functions)": "#3355C4",
+          "gold leaf (metallic accents)": "#C9A45C"
+        },
+        "fields_by_section": "One warm-black stage throughout; colour comes from the syntax and the lacquered totems. No neon, no glow borders, no matrix rain, no cyber navy.",
+        "materials": "High-gloss lacquer on solid primitives (clearcoat 1, low roughness, colour from the token type that created it), gold-leaf metal trims (metalness 1, roughness 0.3), a dark reflective floor or seamless sweep with a soft contact shadow. Rim light so shapes separate from the warm black.",
+        "type": "Code at stage scale: Martian Mono (or Fragment Mono). Display: Science Gothic, wide (verify it loads; fall back to Anybody at wdth 150). Plain-English comments in the code are the real copy, set in porcelain so non-technical visitors can read the page without reading code.",
+        "grid": "One source buffer; the cursor line is the downbeat. Sections map to code blocks."
+      },
+      "first_viewport": {
+        "desktop": "Left half: a code buffer of about 9 lines, e.g. '// We design, build and ship your product' / 'const product = prodevly.build({' / '  type: \"web app\",' / '  stack: [\"Next.js\", \"MongoDB\"],' / '})' with the current line pulsing citrine. Right half: the lacquered totem that code describes, built from stacked primitives coloured by token type. Above the code: display headline. 'Start a project' as a run button: '▶ Start a project'.",
+        "phone": "A single highlighted code line lane at the top (one line at a time), the totem centred in the middle, the headline and CTA on a solid card below."
+      },
+      "chapters": {
+        "hero": "Totem assembled from the code; pieces arrive one per beat as the lines run.",
+        "services": "'services.map(build)': the totem splits into six small totems in a row, each one built by its own line (Web apps, SaaS, Custom, Mobile, UI/UX, Cloud).",
+        "projects": "'ship(project)': the totems rise onto a gold rail and slide past like a deploy log; 'Sample project' labels.",
+        "pricing": "'plan(\"Sprint\" | \"Build\" | \"Platform\")': three totems of growing complexity; prices come from the admin.",
+        "team": "'team.forEach(sign)': each piece gets a gold-leaf initial (maker's mark).",
+        "contact": "'await prodevly.start(yourProject)': an empty, softly lit slot waits for a new piece."
+      },
+      "signature_interaction": "Click a highlighted value in the code (a colour, a count) to cycle it, and the totem rebuilds on the next beat. In the preview, cycle one value automatically on a timer.",
+      "challenger_case": "Wins on product clarity (it literally shows code turning into a product). Weaker on audience identification for non-technical SMB owners, which is why the comments carry the copy.",
+      "honest_risk": "Code can intimidate non-technical buyers, and a dark code stage sits close to the 'hacker' cliché; it must stay warm, jewel-toned and plain-spoken to avoid that."
+    },
+    {
+      "id": "canon",
+      "role": "canon",
+      "name": "Studio Standard",
+      "thesis": "The category standard, played straight and well: a light, minimal premium-studio site with one glossy 3D hero object (the ProDevly monogram) that changes pose per section, big grotesk type, and familiar sections. Effective, recognisable, low risk.",
+      "world": {
+        "palette": {
+          "paper grey (ground)": "#F1F2F4",
+          "ink": "#111214",
+          "signal orange (single accent, the monogram lacquer)": "#FF5A1F",
+          "line": "#D5D8DE"
+        },
+        "fields_by_section": "One light ground throughout; orange only on the monogram and primary buttons.",
+        "materials": "The extruded 'P' monogram (Shape + ExtrudeGeometry with a generous bevel) in glossy orange lacquer (clearcoat 1); a soft shadow on a light floor. Nothing else in 3D.",
+        "type": "Display: Host Grotesk 700. Text: Host Grotesk 400. Mono: Fragment Mono.",
+        "grid": "12-column grid, generous whitespace, cards for projects and pricing."
+      },
+      "first_viewport": {
+        "desktop": "Big two-line headline left, the orange P monogram slowly rotating right, nav across the top, 'Start a project' pill.",
+        "phone": "Headline top, monogram centred below, CTA under it."
+      },
+      "chapters": {
+        "hero": "Monogram three-quarter view, slow idle rotation.",
+        "services": "Monogram turns edge-on and slides to the right third beside a services list.",
+        "projects": "Monogram shrinks into the corner as a grid of sample project cards takes the stage.",
+        "pricing": "Monogram tilts face-up above three pricing cards (names sample, prices from the admin).",
+        "team": "Monogram front-on behind a team grid.",
+        "contact": "Monogram large and centred behind the contact block."
+      },
+      "signature_interaction": "Monogram tilts toward the pointer.",
+      "honest_risk": "It is the look most studio sites already have; it will not be remembered, and it underuses the 'full 3D totems' brief."
+    }
+  ],
+  "declined_challengers": [
+    {"world": "an alien forest understory at nightfall, lit by luminescent spores", "verdict": "declined", "why": "Loses audience identification and product clarity: a botanical night world says nothing about building software.", "kept": "Attention is illumination: light wakes where the visitor looks (raised into Keycap Colorway as per-key underglow)."},
+    {"world": "a night sea of bioluminescent plankton tracing every wake", "verdict": "declined", "why": "Beautiful, but abstract; visitors would not connect it to a software studio.", "kept": "Motion leaves a fading memory (raised as a nav that remembers visited sections)."},
+    {"world": "a toy brand program built on one licensed hue at full strength", "verdict": "declined", "why": "A single hue contradicts the brief's 'colourful', and it says brand, not software.", "kept": "Total colour commitment: each chapter drenched in one field edge to edge."},
+    {"world": "a jazz session sleeve: hard-cropped duotone photo, angled caps, one flat colour band", "verdict": "declined", "why": "A designer's reference; founders and SMB owners would not see themselves in it, and it is a projects-section grammar more than a whole world.", "kept": "Compositional tension: hard crops and angled legends for project imagery."},
+    {"world": "a CRT oscilloscope on a signal bench", "verdict": "declined", "why": "Phosphor-green-on-black is the opposite of the colourful brief and reads as lab equipment.", "kept": "Every division means something: the 1u key grid."}
+  ]
+}
